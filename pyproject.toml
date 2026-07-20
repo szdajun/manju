@@ -1,0 +1,16 @@
+[project]
+name = "manju"
+version = "0.1.0"
+description = "AI 漫剧生成 pipeline (打工牛马/健身题材幽默向)"
+requires-python = ">=3.11"
+dependencies = [
+    "pillow>=10",
+    "opencv-python>=4.8",
+    "numpy>=1.26,<2",
+]
+
+[tool.uv]
+dev-dependencies = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

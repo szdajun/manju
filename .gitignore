@@ -1,0 +1,25 @@
+# 素材 / 产物不入 git
+assets/
+shots/
+audio/
+output/
+_temp/
+*.mp4 *.mov *.webm *.mkv
+*.wav *.mp3 *.aac *.m4a
+*.png *.jpg *.jpeg *.webp
+
+# 密钥
+.env
+*.key
+secrets/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.uv/
+*.egg-info/
+
+# os
+.DS_Store
+Thumbs.db

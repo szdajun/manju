@@ -81,6 +81,49 @@ def build_face_shot_workflow(
     }
 
 
+def build_txt2img_workflow(
+    positive,
+    negative,
+    ckpt=DEFAULT_CKPT,
+    width=512,
+    height=912,            # 9:16 竖版, 匹配 manju + Seedance i2v
+    seed=None,
+    steps=32,
+    cfg=6.5,
+    sampler="dpmpp_2m",
+    scheduler="karras",
+    filename_prefix="manju_lihui",
+):
+    """SD1.5 纯文本生图(写实立绘用; 立绘是脸源, 不需 IPAdapter 锁脸)。"""
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    return {
+        "ckpt": {"class_type": "CheckpointLoaderSimple",
+                 "inputs": {"ckpt_name": ckpt}},
+        "pos": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": positive}},
+        "neg": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": negative}},
+        "empty": {"class_type": "EmptyLatentImage",
+                  "inputs": {"width": width, "height": height, "batch_size": 1}},
+        "ksampler": {"class_type": "KSampler",
+                     "inputs": {"model": ["ckpt", 0],
+                                "positive": ["pos", 0],
+                                "negative": ["neg", 0],
+                                "latent_image": ["empty", 0],
+                                "seed": seed,
+                                "steps": steps,
+                                "cfg": cfg,
+                                "sampler_name": sampler,
+                                "scheduler": scheduler,
+                                "denoise": 1.0}},
+        "vae": {"class_type": "VAEDecode",
+                "inputs": {"samples": ["ksampler", 0], "vae": ["ckpt", 2]}},
+        "save": {"class_type": "SaveImage",
+                 "inputs": {"images": ["vae", 0], "filename_prefix": filename_prefix}},
+    }
+
+
 def build_ltx_i2v_workflow(
     image_name,
     positive,
@@ -163,6 +206,7 @@ def build_wan_i2v_workflow(
     t5_device="cpu",         # 12GB 显存(RTX 4070)铁律: T5 上 GPU 编码会 OOM. precision 仅 [fp32,bf16] 无 fp8 compute → fp8 文件(4.75GB)上 GPU 被转 bf16(~9.5GB) + VAE + CUDA context > 12GB(2026-07-20 smoke 实测 utils.py:191 value.to(device) OOM). CPU 编码 umt5 ~20s/prompt, 10 镜≈3-4min 可接受. 大显存机器可改 "gpu".
     t5_disk_cache=True,      # CPU T5 编码慢(~10s/layer, 24 层≈4min/prompt)→ 开磁盘缓存(custom_nodes/ComfyUI-WanVideoWrapper/text_embed_cache). 同 prompt 二次起命中缓存秒回; smoke 固定 prompt 只付一次成本, 量产 10 镜各 prompt 也只编码一次.
     vae_model="Wan2_2_VAE_bf16.safetensors",
+    vae_tile=272,
     filename_prefix="manju_wan",
 ):
     """Wan2.2-TI2V-5B 图生视频工作流(ComfyUI API 格式)。
@@ -196,7 +240,8 @@ def build_wan_i2v_workflow(
         "img": {"class_type": "LoadImage", "inputs": {"image": image_name}},
         "enc": {"class_type": "WanVideoEncode", "inputs": {
             "vae": ["vae", 0], "image": ["img", 0], "enable_vae_tiling": True,
-            "tile_x": 272, "tile_y": 272, "tile_stride_x": 144, "tile_stride_y": 128}},
+            "tile_x": vae_tile, "tile_y": vae_tile,
+            "tile_stride_x": vae_tile // 2, "tile_stride_y": vae_tile // 2}},
         "embeds": {"class_type": "WanVideoEmptyEmbeds", "inputs": {
             "width": width, "height": height, "num_frames": length,
             "extra_latents": ["enc", 0]}},
@@ -207,7 +252,8 @@ def build_wan_i2v_workflow(
             "force_offload": True, "scheduler": scheduler, "riflex_freq_index": 0}},
         "dec": {"class_type": "WanVideoDecode", "inputs": {
             "vae": ["vae", 0], "samples": ["sampler", 0], "enable_vae_tiling": True,
-            "tile_x": 272, "tile_y": 272, "tile_stride_x": 144, "tile_stride_y": 128}},
+            "tile_x": vae_tile, "tile_y": vae_tile,
+            "tile_stride_x": vae_tile // 2, "tile_stride_y": vae_tile // 2}},
         "save": {"class_type": "VHS_VideoCombine", "inputs": {
             "images": ["dec", 0], "frame_rate": frame_rate, "loop_count": 0,
             "filename_prefix": filename_prefix, "format": "video/h264-mp4",

@@ -20,6 +20,9 @@ __pycache__/
 .uv/
 *.egg-info/
 
+# logs (运行时产物: comfyui/ep02/smoke 等 .log)
+*.log
+
 # os
 .DS_Store
 Thumbs.db

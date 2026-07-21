@@ -1,4 +1,4 @@
-"""ep01 成片组装 v1/v2。
+"""ep01 成片组装 v1~v4。
 
 v1(rough cut): KB 慢推静态镜 + 3× 慢放动态镜, 硬切, 无字幕无音。
 v2: + 字幕(PIL 黄字黑描边, 避 ffmpeg drawtext 8.1 bug)
@@ -6,11 +6,15 @@ v2: + 字幕(PIL 黄字黑描边, 避 ffmpeg drawtext 8.1 bug)
     + KB 运镜变化(推近 in / 拉远 out / 横摇 pan 交替, 不再全中心推)
     + 静音占位音轨(AAC, TTS 替换时直接换音轨)
 v3: = v2 画面 + 真配音(逐镜 TTS 旁白 mux, xfade 视频链 + acrossfade 音频链对齐)。
+v4: 写实版(Seedance i2v 8 镜 {1,3,4,5,6,7,8,10})。片段已是动态视频(5s@24fps),
+    不 KB 不慢放, 仅 scale+crop 到 720×1280 + 字幕; 旁白复用 v3 MiniMax 配音;
+    xfade(视频)+acrossfade(音频) 链。源 480×864→720×1280 lanczos 1.5× 上采。
 
 用法:
     python scripts/make_ep01.py --mode v1        # rough cut 纯画面硬切
     python scripts/make_ep01.py --mode v2        # 字幕+转场+KB变化+静音音轨
     python scripts/make_ep01.py --mode v3        # v2 + 真配音(edge-tts 草版/可切 provider)
+    python scripts/make_ep01.py --mode v4        # 写实 Seedance 8 镜成片
 """
 import argparse
 import os
@@ -29,9 +33,11 @@ FONT = "C:/Windows/Fonts/msyhbd.ttc"
 LEAD_IN_MS = 300   # 旁白 lead-in 静音(ms), 避免开口贴镜首
 
 FPS = 16
+V4_FPS = 24                      # 写实 Seedance 片段原生 24fps, 保流畅不动
 W, H = 720, 1280
 XFADE = 0.4
 TIMESCALE = str(FPS * 1024)
+V4_TS = str(V4_FPS * 1024)
 ENC = ["-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
        "-r", str(FPS), "-video_track_timescale", TIMESCALE,
        "-frames:v", None]  # frames 占位, 调用时填
@@ -48,6 +54,20 @@ SHOTS = [
     (8, 10.0, "kb",  f"{EP01}/ep01_shot08_00001_.png", "兄弟你这体能……但我，加过班。", "out"),
     (9, 10.0, "kb",  f"{EP01}/ep01_shot09_00001_.png", "健身……是为了更好地加班吗？", "in"),
     (10, 10.0, "kb", f"{EP01}/ep01_shot10_00001_.png", "我是牛马，但我要做，一个举过铁的牛马。", "in"),
+]
+
+# 写实版 v4: Seedance i2v 8 镜(用户挑掉 2 冗余 + 9 弱)。片段统一 5s@24fps,
+# 不分 kb/dyn(全是动态视频), 无 kb_type。台词与漫画版同镜一致。
+I2V_REAL = "../manju/output/ep01_i2v_real"
+SHOTS_REAL = [
+    (1,  f"{I2V_REAL}/ep01_shot01.mp4", "加班到十二点，老板说……健康也很重要。"),
+    (3,  f"{I2V_REAL}/ep01_shot03.mp4", "第一次，我觉得……我不属于这里。"),
+    (4,  f"{I2V_REAL}/ep01_shot04.mp4", "这玩意儿……比我KPI还重。"),
+    (5,  f"{I2V_REAL}/ep01_shot05.mp4", "再跑五分钟……啊！！"),
+    (6,  f"{I2V_REAL}/ep01_shot06.mp4", "蛋白粉配冰美式，打工人专属。"),
+    (7,  f"{I2V_REAL}/ep01_shot07.mp4", "核心……要稳……"),
+    (8,  f"{I2V_REAL}/ep01_shot08.mp4", "兄弟你这体能……但我，加过班。"),
+    (10, f"{I2V_REAL}/ep01_shot10.mp4", "我是牛马，但我要做，一个举过铁的牛马。"),
 ]
 
 
@@ -129,9 +149,9 @@ def kenburns_vf(dur, kb_type):
             f"d={n}:s={W}x{H}:fps={FPS}")
 
 
-def enc_args(nframes):
+def enc_args(fps=FPS, ts=TIMESCALE):
     return ["-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
-            "-r", str(FPS), "-video_track_timescale", TIMESCALE]
+            "-r", str(fps), "-video_track_timescale", ts]
 
 
 def gen_seg_kb(src, dst, dur, kb_type, sub_png):
@@ -139,9 +159,9 @@ def gen_seg_kb(src, dst, dur, kb_type, sub_png):
     if sub_png:
         fc = f"[0:v]{vf}[bg];[bg][1:v]overlay=0:0:shortest=1[v]"
         run([FFMPEG, "-y", "-i", src, "-loop", "1", "-i", sub_png,
-             "-filter_complex", fc, "-map", "[v]"] + enc_args(None) + [dst])
+             "-filter_complex", fc, "-map", "[v]"] + enc_args() + [dst])
     else:
-        run([FFMPEG, "-y", "-i", src, "-vf", vf] + enc_args(None) + [dst])
+        run([FFMPEG, "-y", "-i", src, "-vf", vf] + enc_args() + [dst])
 
 
 def gen_seg_dyn(src, dst, dur, sub_png, factor=3.0):
@@ -150,9 +170,25 @@ def gen_seg_dyn(src, dst, dur, sub_png, factor=3.0):
     if sub_png:
         fc = f"[0:v]{base}[bg];[bg][1:v]overlay=0:0:shortest=1[v]"
         run([FFMPEG, "-y", "-i", src, "-loop", "1", "-i", sub_png,
-             "-filter_complex", fc, "-map", "[v]"] + enc_args(None) + [dst])
+             "-filter_complex", fc, "-map", "[v]"] + enc_args() + [dst])
     else:
-        run([FFMPEG, "-y", "-i", src, "-vf", base] + enc_args(None) + [dst])
+        run([FFMPEG, "-y", "-i", src, "-vf", base] + enc_args() + [dst])
+
+
+def gen_seg_i2v(src, dst, sub_png, fps=V4_FPS):
+    """写实 i2v 片段: 已是动态视频(5s@24fps), 不 KB 不慢放。
+    scale+crop 到 720×1280(源 480×864 lanczos 1.5× 上采) + 字幕 overlay。fps 保原生流畅。
+    """
+    base = (f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,"
+            f"crop={W}:{H},fps={fps}")
+    if sub_png:
+        fc = f"[0:v]{base}[bg];[bg][1:v]overlay=0:0:shortest=1[v]"
+        run([FFMPEG, "-y", "-i", src, "-loop", "1", "-i", sub_png,
+             "-filter_complex", fc, "-map", "[v]"]
+            + enc_args(fps=fps, ts=V4_TS) + [dst])
+    else:
+        run([FFMPEG, "-y", "-i", src, "-vf", base]
+            + enc_args(fps=fps, ts=V4_TS) + [dst])
 
 
 # ---------------- 拼接 ----------------
@@ -166,7 +202,7 @@ def concat_hard(segs, dst):
          "-c", "copy", dst])
 
 
-def concat_xfade(segs, durs, dst, xfade=XFADE):
+def concat_xfade(segs, durs, dst, xfade=XFADE, fps=FPS, ts=TIMESCALE):
     """链式 xfade。offset_i = sum(durs[:i]) - i*xfade(实测时长, 精确)。"""
     n = len(segs)
     inputs = []
@@ -180,7 +216,7 @@ def concat_xfade(segs, durs, dst, xfade=XFADE):
                      f"duration={xfade}:offset={offset}[{label}]")
         prev = label
     run([FFMPEG, "-y"] + inputs + ["-filter_complex", ";".join(parts),
-         "-map", "[vout]"] + enc_args(None) + [dst])
+         "-map", "[vout]"] + enc_args(fps=fps, ts=ts) + [dst])
 
 
 def add_silent_audio(video, dst):
@@ -213,10 +249,12 @@ def mux_seg_audio(seg_video, voice_mp3, dst):
              "-shortest", dst])
 
 
-def concat_xfade_av(segs, durs, dst, xfade=XFADE):
+def concat_xfade_av(segs, durs, dst, xfade=XFADE, fps=FPS, ts=TIMESCALE,
+                    transition="fade"):
     """链式 xfade(视频) + acrossfade(音频) 对齐。offset_i = sum(durs[:i]) - i*xfade。
 
-    每段音画同长 → 视频重叠 0.4s 处音频也 acrossfade 0.4s, 两链同步。
+    每段音画同长 → 视频重叠 xfade 秒处音频也 acrossfade xfade 秒, 两链同步。
+    transition: xfade 视频转场类型(fade 交叉溶解 / fadeblack 黑场章节 / dissolve…)。
     """
     n = len(segs)
     inputs = []
@@ -227,26 +265,72 @@ def concat_xfade_av(segs, durs, dst, xfade=XFADE):
         offset = round(sum(durs[:i]) - i * xfade, 3)
         lv = "vout" if i == n - 1 else f"x{i}"
         la = "aout" if i == n - 1 else f"af{i}"
-        pv.append(f"[{prev_v}][{i}:v]xfade=transition=fade:"
+        pv.append(f"[{prev_v}][{i}:v]xfade=transition={transition}:"
                   f"duration={xfade}:offset={offset}[{lv}]")
         pa.append(f"[{prev_a}][{i}:a]acrossfade=duration={xfade}"
                   f":curve1=tri:curve2=tri[{la}]")
         prev_v, prev_a = lv, la
     fc = ";".join(pv + pa)
     run([FFMPEG, "-y"] + inputs + ["-filter_complex", fc,
-         "-map", "[vout]", "-map", "[aout]"] + enc_args(None)
+         "-map", "[vout]", "-map", "[aout]"] + enc_args(fps=fps, ts=ts)
          + ["-c:a", "aac", "-b:a", "128k", dst])
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", default="v2", choices=["v1", "v2", "v3"])
+    ap.add_argument("--mode", default="v2", choices=["v1", "v2", "v3", "v4"])
     ap.add_argument("--out", default=None)
+    ap.add_argument("--xfade-dur", type=float, default=0.4,
+                    help="xfade 转场时长(秒), 默认 0.4")
+    ap.add_argument("--xfade-trans", default="fade",
+                    help="xfade 转场类型: fade/fadeblack/dissolve/…, 默认 fade")
     args = ap.parse_args()
 
     os.makedirs(OUT, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix=f"ep01_{args.mode}_")
     print(f"[tmp] {tmp}")
+
+    out = args.out or os.path.join(OUT, f"ep01_{args.mode}.mp4")
+
+    if args.mode == "v4":
+        # 写实 Seedance 8 镜: 全 i2v, 不分 kb/dyn, 复用字幕 + 旁白 mux + xfade_av。
+        # 固定 tmp + seg/av 增量跳过 → 转场实验(--xfade-*)只重跑 concat, 秒出。
+        tmp = os.path.join(OUT, "_v4_tmp")
+        os.makedirs(tmp, exist_ok=True)
+        print(f"[tmp] {tmp}")
+        segs = []
+        for shot, src, line in SHOTS_REAL:
+            if not os.path.exists(src):
+                print(f"[ERR] 源缺失: {src}")
+                return 1
+            dst = os.path.join(tmp, f"seg{shot:02d}.mp4")
+            if not os.path.exists(dst):
+                sub_png = os.path.join(tmp, f"sub{shot:02d}.png")
+                render_subtitle(line, sub_png)
+                print(f"=== shot {shot:2d} i2v ===", flush=True)
+                gen_seg_i2v(src, dst, sub_png)
+            else:
+                print(f"=== shot {shot:2d} cached ===")
+            segs.append(dst)
+        durs = [probe_dur(s) for s in segs]
+        print(f"[durs] {[round(d,2) for d in durs]}  sum={sum(durs):.2f}")
+        segs_av = []
+        for (shot, src, line), seg_v in zip(SHOTS_REAL, segs):
+            voice = os.path.join(VOICE, f"voice_shot{shot:02d}.mp3")
+            dst_av = os.path.join(tmp, f"av{shot:02d}.mp4")
+            tag = os.path.basename(voice) if os.path.exists(voice) else "(silent)"
+            if not os.path.exists(dst_av):
+                print(f"  mux shot {shot:2d}  {tag}")
+                mux_seg_audio(seg_v, voice, dst_av)
+            else:
+                print(f"  mux shot {shot:2d}  cached")
+            segs_av.append(dst_av)
+        durs_av = [probe_dur(s) for s in segs_av]
+        concat_xfade_av(segs_av, durs_av, out, fps=V4_FPS, ts=V4_TS,
+                        xfade=args.xfade_dur, transition=args.xfade_trans)
+        final_dur = probe_dur(out)
+        print(f"\n[done] -> {out}  ({final_dur:.1f}s)")
+        return 0
 
     use_subs = args.mode in ("v2", "v3")
     segs = []
@@ -270,7 +354,6 @@ def main():
     durs = [probe_dur(s) for s in segs]
     print(f"[durs] {[round(d,2) for d in durs]}  sum={sum(durs):.2f}")
 
-    out = args.out or os.path.join(OUT, f"ep01_{args.mode}.mp4")
     if args.mode == "v3":
         # 每段 mux 本镜旁白 → xfade(视频)+acrossfade(音频) 对齐链
         segs_av = []

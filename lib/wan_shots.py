@@ -28,4 +28,9 @@ WAN_PROMPTS = {
 
 WAN_NEG = ("text, watermark, logo, distorted face, deformed hands, morphing identity, "
            "extra fingers, bad anatomy, blurry, low quality, violent scene change, "
-           "mouth disappearing, melting face, face morphing, cartoon, anime")
+           "mouth disappearing, melting face, face morphing, cartoon, anime, "
+           "distorted eyes, asymmetric eyes, uneven eyes, melting eyes, cross-eyed, "
+           "lazy eye, misshapen irises, warped eyes, mismatched eyes, "
+           "drooping eyelids, ptosis, hooded eyelids, heavy eyelids, puffy eyelids, "
+           "uneven eyelids, lower eyelid too high, squinting, sanpakugan, sclera showing, "
+           "bags under eyes, bloodshot eyes")

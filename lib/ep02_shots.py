@@ -73,7 +73,7 @@ I2V_MOTION = {
     8: "energetic aerobics dance with arm movements and gentle bouncing, neon lights flickering, "
        "the people behind sway gently, face stays clear and in focus",
     9: "the colleague clenches a fist with growing excitement, subtle motion, the slim fit woman smiling",
-    10: "the two women stand side by side linking arms, both facing the camera with warm happy smiles, very subtle gentle motion and soft breathing, both faces stay sharp symmetric and well-formed throughout, the slim fit woman's face stays perfectly still front-facing, the colleague's face also stays still sharp and natural, no head turning, no leaning toward each other, no face distortion",
+    10: "the two women stand side by side linking arms, both facing the camera with warm happy smiles, very subtle gentle motion and soft breathing, both faces stay sharp symmetric and well-formed throughout, both women's eyes stay open sharp symmetric and natural for the entire clip with no distortion or asymmetry, both women have natural well-formed eyelids with eyes normally open, no drooping or squinting eyelids, the slim fit woman's face and eyes stay perfectly still front-facing, the colleague's face also stays still sharp and natural, no head turning, no leaning toward each other, no face distortion, no eye distortion",
 }
 
 # 漫画 NEG(反逼写实, 复用 gen_shot.NEG_DEFAULT; + 脸形变项治 i2v 脸漂)

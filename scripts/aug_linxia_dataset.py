@@ -60,7 +60,8 @@ PANTS_CAPTION = (
 
 def collect_inputs() -> list[Path]:
     paths = []
-    for n in range(0, 16):
+    # 林夏立绘候选 - 拓展到 0..40 (含 2026-07-24 batch +00017_~+00036_)
+    for n in range(0, 40):
         p = Path(SRC_DIR) / f"manju_linxia_real_{n:05d}_.png"
         if p.exists():
             paths.append(p)

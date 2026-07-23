@@ -26,3 +26,14 @@ __pycache__/
 # os
 .DS_Store
 Thumbs.db
+
+# 开发探针/未定稿实验(2026-07-23 整理): 下划线前缀 = 一次性诊断脚本不入 git,
+# 磁盘留底供未来查思路; 正式流水线脚本用正常命名(gen_*/make_*)才入 git。
+scripts/_*.py
+# facelock 实验链(未进 ep02 定稿, 探索中方向, 留磁盘备查)
+scripts/face_swap_batch.py
+scripts/face_swap_dual.py
+scripts/face_warp_eyelid.py
+
+# 本地 ComfyUI 连接配置(WSL 8189 端口, 非凭据但本机特定)
+_wsl8189.json

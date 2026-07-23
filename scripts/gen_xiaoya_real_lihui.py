@@ -23,27 +23,46 @@ POS = (
     "front-facing half body, long straight black hair, bright cheerful face, confident smile, "
     "fit toned body, wearing a white office blouse and pencil skirt, looking at camera, "
     "real photograph, 50mm lens, cinematic soft lighting, shallow depth of field, "
-    "detailed skin texture, plain neutral background, vertical portrait, 8k uhd, sharp focus"
+    "detailed skin texture, plain neutral background, vertical portrait, 8k uhd, sharp focus, "
+    "bright energetic fresh eyes, thin smooth natural lower eyelids, clean under-eye area, "
+    "well-rested fresh youthful look, bright alert eyes, smooth lower eyelid contour, "
+    # 2026-07-22 治浓妆(用户报换脸后"化妆很浓"→ inswapper 把立绘浓妆复制到每帧):
+    # 素颜/淡妆正向, 把"浓妆感"从源头压掉, 否则换脸输出永远带妆。
+    "bare-faced natural look, minimal no-makeup look, clean fresh bare skin, "
+    "nude natural pink lips, no eyeliner, no eyeshadow, natural soft eyebrows, "
+    "plain unmade-up face, healthy fresh complexion"
 )
+# 反厚下眼睑(2026-07-22 治本): 旧版 NEG 无眼睑反词 → DreamShaper 默认生成厚下眼睑/眼袋
+# → 立绘本身厚 → IPAdapter 0.95 烙进每帧关键帧, EYE_FIX 正向词被压过。这里回到源头堵。
+# 2026-07-22 同源治浓妆: 加反眼线/眼影/口红/腮红/粉底词。
 NEG = (
     "illustration, anime, cartoon, painting, 3d render, cg, digital art, "
     "text, watermark, signature, extra fingers, deformed hands, mutated, bad anatomy, "
-    "blurry, oversaturated, plastic skin, airbrushed"
+    "blurry, oversaturated, plastic skin, airbrushed, "
+    "puffy under-eye, thick lower eyelid, heavy lower eyelid, prominent lower eyelid, "
+    "heavy eyelids, hooded eyelids, drooping eyelids, sagging eyelids, puffy eyelids, "
+    "eye bags, bags under eyes, prominent eye bags, dark circles, tired eyes, "
+    "lower eyelid too high, sanpakugan, sclera showing, uneven eyelids, squinting, "
+    "heavy makeup, eyeliner, eyeshadow, lipstick, red lips, bright lipstick, blush, "
+    "contouring, heavy foundation, drawn-on eyebrows, dramatic eye makeup, smokey eyes, "
+    "false eyelashes, lip gloss, mascara, made-up face, visible cosmetics"
 )
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--seeds", type=int, default=6)
+    ap.add_argument("--seeds", type=int, default=8)
     ap.add_argument("--ckpt", default=CKPT)
     ap.add_argument("--server", default="http://127.0.0.1:8188")
+    ap.add_argument("--seed-base", type=int, default=7000,
+                    help="seed 起始(7000=2026-07-22 淡妆批, 避开旧 2000 族)")
     args = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     c = ComfyUIClient(args.server)
 
     cands = []
     for i in range(args.seeds):
-        seed = 2000 + i * 7   # 与 manga 小雅(seed 2000 族)对齐, 可复现
+        seed = args.seed_base + i * 7
         wf = build_txt2img_workflow(
             POS, NEG, ckpt=args.ckpt, width=512, height=912, seed=seed,
             steps=32, cfg=6.5, filename_prefix=PREFIX)

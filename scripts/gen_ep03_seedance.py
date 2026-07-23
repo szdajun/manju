@@ -40,20 +40,23 @@ def main():
     ap.add_argument("--shots", default="1,2,3,4,5")
     ap.add_argument("--duration", type=int, default=5)
     ap.add_argument("--resolution", default="480p")
+    ap.add_argument("--kf-dir", default=KF_DIR, help="关键帧目录 (含 ep03_shotNN_*.png), 默认 ep03_real")
+    ap.add_argument("--out", default=OUT, help="i2v 输出目录, 默认 ep03_i2v_real/_seedance")
     args = ap.parse_args()
-    os.makedirs(OUT, exist_ok=True)
+    os.makedirs(args.out, exist_ok=True)
+    kf_dir = args.kf_dir
 
     shots = [int(x) for x in args.shots.split(",") if x.strip()]
     ok, skip, fail = [], [], []
     for s in shots:
-        out = os.path.join(OUT, f"ep03_shot{s:02d}.mp4")
+        out = os.path.join(args.out, f"ep03_shot{s:02d}.mp4")
         if os.path.exists(out):
             print(f"[skip] shot{s:02d} 已存在: {os.path.basename(out)}", flush=True)
             skip.append(s)
             continue
-        cands = sorted(glob.glob(os.path.join(KF_DIR, f"ep03_shot{s:02d}_*.png")))
+        cands = sorted(glob.glob(os.path.join(kf_dir, f"ep03_shot{s:02d}_*.png")))
         if not cands:
-            print(f"[ERR] shot{s:02d} 关键帧缺: ep03_shot{s:02d}_*.png in {KF_DIR}", flush=True)
+            print(f"[ERR] shot{s:02d} 关键帧缺: ep03_shot{s:02d}_*.png in {kf_dir}", flush=True)
             fail.append(s)
             continue
         src = cands[-1]

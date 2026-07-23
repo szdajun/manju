@@ -166,6 +166,98 @@ def build_dual_face_shot_workflow(
     }
 
 
+def build_face_body_shot_workflow(
+    ref_face_name,
+    ref_body_name,
+    positive,
+    negative,
+    ckpt=DEFAULT_CKPT,
+    width=480,
+    height=832,                # Wan i2v 原生桶, 与 build_dual_face_shot_workflow / gen_ep02_real_batch 一致
+    seed=None,
+    steps=28,
+    cfg=6.5,
+    sampler="dpmpp_2m",
+    scheduler="karras",
+    weight_face=0.95,          # 脸 ref weight (沿用 ep02 验证值)
+    weight_body=0.70,          # 全身 ref weight (调研推荐值, 待实测调)
+    weight_type="linear",
+    embeds_scaling="V only",
+    denoise=1.0,
+    filename_prefix="manju_face_body_shot",
+):
+    """ep03 双 IPAdapter 锁脸+锁衣服工作流 (2026-07-23 验证)。
+
+    模型链: ckpt → unified → ipa(face ref, weight=0.95) → ipa2(body ref, weight=0.70) → ksampler。
+    两个 IPAdapterAdvanced 共用同一 unified loader 的 ipadapter (= 同 model 文件, 方案 B);
+    后续可升级方案 A (用 IPAdapterModelLoader 分别加载 face+body adapter model 文件)
+    但当前 cubiq/ComfyUI_IPAdapter_plus 同图内 IPAdapterModelLoader + Unified Loader 共存未实测。
+
+    **目的**: 验证"双 IPAdapter 堆叠 (脸 0.95 + 全身 0.70)"能否真锁衣服跨镜一致
+    (用户最大痛点 "IPAdapter-Plus FACE 只锁脸不锁身")。
+
+    Args:
+        ref_face_name: 脸 ref 文件名 (如 "linxia_real_face.png", 由 crop_face.py 产出)
+        ref_body_name: 全身 ref 文件名 (如 "linxia_real.png" 512×912 原图, 不裁)
+        weight_face: 脸 IPAdapter weight (默认 0.95, 沿用 ep02)
+        weight_body: 全身 IPAdapter weight (默认 0.70, 调研推荐; 可调 0.6-0.8)
+    """
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    return {
+        "ckpt": {"class_type": "CheckpointLoaderSimple",
+                 "inputs": {"ckpt_name": ckpt}},
+        "ref_face": {"class_type": "LoadImage",
+                     "inputs": {"image": ref_face_name}},
+        "ref_body": {"class_type": "LoadImage",
+                     "inputs": {"image": ref_body_name}},
+        "empty": {"class_type": "EmptyLatentImage",
+                  "inputs": {"width": width, "height": height, "batch_size": 1}},
+        "unified": {"class_type": "IPAdapterUnifiedLoader",
+                    "inputs": {"model": ["ckpt", 0],
+                               "preset": "PLUS FACE (portraits)"}},
+        # 第一个 adapter: 脸 ref → 锁脸
+        "ipa_face": {"class_type": "IPAdapterAdvanced",
+                     "inputs": {"model": ["unified", 0],
+                                "ipadapter": ["unified", 1],
+                                "image": ["ref_face", 0],
+                                "weight": weight_face,
+                                "weight_type": weight_type,
+                                "combine_embeds": "concat",
+                                "start_at": 0.0, "end_at": 1.0,
+                                "embeds_scaling": embeds_scaling}},
+        # 第二个 adapter: 全身 ref → 尝试锁衣 (链式, 吃 ipa_face 输出)
+        "ipa_body": {"class_type": "IPAdapterAdvanced",
+                     "inputs": {"model": ["ipa_face", 0],
+                                "ipadapter": ["unified", 1],
+                                "image": ["ref_body", 0],
+                                "weight": weight_body,
+                                "weight_type": weight_type,
+                                "combine_embeds": "concat",
+                                "start_at": 0.0, "end_at": 1.0,
+                                "embeds_scaling": embeds_scaling}},
+        "pos": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": positive}},
+        "neg": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": negative}},
+        "ksampler": {"class_type": "KSampler",
+                     "inputs": {"model": ["ipa_body", 0],
+                                "positive": ["pos", 0],
+                                "negative": ["neg", 0],
+                                "latent_image": ["empty", 0],
+                                "seed": seed,
+                                "steps": steps,
+                                "cfg": cfg,
+                                "sampler_name": sampler,
+                                "scheduler": scheduler,
+                                "denoise": denoise}},
+        "vae": {"class_type": "VAEDecode",
+                "inputs": {"samples": ["ksampler", 0], "vae": ["ckpt", 2]}},
+        "save": {"class_type": "SaveImage",
+                 "inputs": {"images": ["vae", 0], "filename_prefix": filename_prefix}},
+    }
+
+
 def build_facedetailer_workflow(
     ref_image_name,
     frame_image_name,

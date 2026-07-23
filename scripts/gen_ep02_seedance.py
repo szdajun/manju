@@ -40,8 +40,9 @@ FACE_POS = (
     "thin smooth natural eyelids, wide open bright alert eyes, clean smooth under-eye area"
 )
 
-# 纯手部/无脸镜不拼脸锚(无眼帘问题, 脸锚反而矛盾)
-NO_FACE_SHOTS = {6}
+# 纯手部/无脸镜不拼脸锚(无眼帘问题, 脸锚反而矛盾)。
+# shot6 改婷婷追问镜(2026-07-23 修复角色错位), 现有脸 → 该拼 FACE_POS 稳婷婷脸+薄眼帘。
+NO_FACE_SHOTS = set()
 
 
 def main():

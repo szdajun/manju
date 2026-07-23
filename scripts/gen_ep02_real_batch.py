@@ -38,14 +38,14 @@ REF = "../manju/output/xiaoya_real/小雅立绘写实_face.png"
 # 婷婷脸 ref(2026-07-22 Phase 2 新生立绘, 双人镜双锁脸用)
 REF_TINGTING = "../manju/output/tingting_real/婷婷立绘写实_face.png"
 OUT = "../manju/output/ep02_real"
-NO_FACE_SHOTS = {6}  # shot6 纯手部特写无主角脸, face_sim 门 skip
+NO_FACE_SHOTS = set()  # shot6 改婷婷追问镜(2026-07-23 修复角色错位), 不再无脸 → face_sim 该测
 # 双人镜(2026-07-22): 婷婷清晰可见且构图可左右分 → 双 IPAdapter 各锁一边脸。
 #   2026-07-23 正反打: shot4/9 改"婷婷 solo 正面说话镜"(单锁婷婷, 见 SOLO_TINGTING),
 #   双锁只剩 shot10 挽臂(两人都正面)。
 DUAL_SHOTS = {10}
 # 正反打(2026-07-23 治互动感+口型靶子): 婷婷台词镜改 solo 正面、视线偏画外(看小雅)。
 #   单锁婷婷脸(REF_TINGTING) + SHOTS_REAL_OVERRIDE 婷婷正面构图。原 2=身后/4=侧身/9=身旁。
-SOLO_TINGTING = {2, 4, 9, 12}  # +12: 收尾 tag 婷婷 power pose(2026-07-23)
+SOLO_TINGTING = {2, 4, 6, 9, 12}  # +6: shot6 改婷婷追问镜(2026-07-23 修复角色错位); +12: tag
 MASK_LEFT = "../manju/output/ep02_real/_masks/mask_left.png"   # 小雅区
 MASK_RIGHT = "../manju/output/ep02_real/_masks/mask_right.png"  # 婷婷区
 

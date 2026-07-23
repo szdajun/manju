@@ -113,6 +113,13 @@ SHOTS_REAL_OVERRIDE = {
     4: ("close-up, the colleague facing the camera front-facing, leaning in with a gossipy knowing smirk, "
         "one hand near her mouth whispering, eyes looking off to the side playfully, "
         "her face clearly visible, office"),
+    # shot6 改婷婷追问镜(2026-07-23 修复角色错位): 原走 else 分支锁小雅, 但 LINES[6]
+    # 「抽脂/代餐/断碳水到底是什么呀」是婷婷追问台词 → 画面小雅+台词婷婷=角色错位(用户报)。
+    # 改婷婷正面追问(同 shot4/9 正反打风格) + 保留"数手指列举"原 shot6 元素(但是婷婷的手+脸)
+    # + 嘴张给 MuseTalk 干净靶 + 视线偏画外(看小雅)建互动。
+    6: ("medium close-up, the colleague faces the camera front-facing, leaning in with eager nosy curiosity, "
+        "one hand gesturing counting on fingers one by one, mouth open mid-question, eyes wide with gossip, "
+        "looking off to the side, her face clearly visible, bright modern office"),
     9: ("medium shot, the colleague faces the camera front-facing, looking off to the side with eyes wide "
         "in excited disbelief, clenching one fist in front of her chest, mouth open, "
         "her face clearly visible, office"),
@@ -142,6 +149,10 @@ I2V_MOTION_REAL_OVERRIDE = {
        "gesturing with both hands, subtle lively motion, her face stays sharp and expressive",
     4: "the colleague leans slightly toward the camera whispering with a gossipy smirk, looking off to the side, "
        "subtle motion, her face stays front-facing and sharp",
+    # shot6 婷婷追问(2026-07-23 角色错位修复, 见 SHOTS_REAL_OVERRIDE[6])
+    6: "the colleague leans in eagerly, gesturing with her hand counting on fingers one by one, "
+       "mouth moving mid-question, eyes wide with nosy curiosity, looking off to the side, "
+       "subtle lively motion, her face stays sharp and front-facing",
     9: "the colleague clenches her fist with growing excited disbelief, eyes wide, looking off to the side, "
        "subtle lively motion, her face stays sharp and expressive",
     # shot11/12 = 收尾 tag「我们是打工牛马，健身达人！」曲臂握拳(2026-07-23)。

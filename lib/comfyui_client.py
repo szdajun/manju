@@ -81,6 +81,195 @@ def build_face_shot_workflow(
     }
 
 
+def build_dual_face_shot_workflow(
+    ref_a_name,
+    ref_b_name,
+    mask_a_name,
+    mask_b_name,
+    positive,
+    negative,
+    ckpt=DEFAULT_CKPT,
+    width=480,
+    height=832,               # Wan i2v 原生桶(与 gen_ep02_real_batch KW/KH 一致)
+    seed=None,
+    steps=28,
+    cfg=6.5,
+    sampler="dpmpp_2m",
+    scheduler="karras",
+    ipadapter_weight=0.9,     # 双锁每张略降(0.95→0.9), 两个强 adapter 叠加易过饱和
+    weight_type="linear",
+    embeds_scaling="V only",
+    denoise=1.0,
+    filename_prefix="manju_dual_shot",
+):
+    """双人锁脸工作流(2026-07-22 Phase 3): 链两个 IPAdapterAdvanced, 各喂一张脸 ref + 一个区域 attn_mask。
+
+    典型: ref_a=小雅脸 + mask_a=左半 → ipa; ref_b=婷婷脸 + mask_b=右半 → ipa2。
+    模型链 ckpt → unified → ipa(ref_a, mask_a) → ipa2(ref_b, mask_b) → ksampler。
+    attn_mask 走 LoadImage 的 MASK 输出(= alpha 通道), 故 mask PNG 须把区域烘进 alpha
+    (区域 alpha=255 白, 区域外 alpha=0)。两张 ref 必须是明显不同人(否则双 adapter 锁混)。
+    """
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    return {
+        "ckpt": {"class_type": "CheckpointLoaderSimple",
+                 "inputs": {"ckpt_name": ckpt}},
+        "ref_a": {"class_type": "LoadImage", "inputs": {"image": ref_a_name}},
+        "ref_b": {"class_type": "LoadImage", "inputs": {"image": ref_b_name}},
+        "mask_a": {"class_type": "LoadImage", "inputs": {"image": mask_a_name}},
+        "mask_b": {"class_type": "LoadImage", "inputs": {"image": mask_b_name}},
+        "empty": {"class_type": "EmptyLatentImage",
+                  "inputs": {"width": width, "height": height, "batch_size": 1}},
+        "unified": {"class_type": "IPAdapterUnifiedLoader",
+                    "inputs": {"model": ["ckpt", 0], "preset": "PLUS FACE (portraits)"}},
+        # 第一个 adapter: 小雅脸 → 左半区
+        "ipa": {"class_type": "IPAdapterAdvanced",
+                "inputs": {"model": ["unified", 0],
+                           "ipadapter": ["unified", 1],
+                           "image": ["ref_a", 0],
+                           "weight": ipadapter_weight,
+                           "weight_type": weight_type,
+                           "combine_embeds": "concat",
+                           "start_at": 0.0, "end_at": 1.0,
+                           "embeds_scaling": embeds_scaling,
+                           "attn_mask": ["mask_a", 1]}},
+        # 第二个 adapter: 婷婷脸 → 右半区(吃 ipa 输出模型, 链式)
+        "ipa2": {"class_type": "IPAdapterAdvanced",
+                 "inputs": {"model": ["ipa", 0],
+                            "ipadapter": ["unified", 1],
+                            "image": ["ref_b", 0],
+                            "weight": ipadapter_weight,
+                            "weight_type": weight_type,
+                            "combine_embeds": "concat",
+                            "start_at": 0.0, "end_at": 1.0,
+                            "embeds_scaling": embeds_scaling,
+                            "attn_mask": ["mask_b", 1]}},
+        "pos": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": positive}},
+        "neg": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": negative}},
+        "ksampler": {"class_type": "KSampler",
+                     "inputs": {"model": ["ipa2", 0],
+                                "positive": ["pos", 0],
+                                "negative": ["neg", 0],
+                                "latent_image": ["empty", 0],
+                                "seed": seed,
+                                "steps": steps,
+                                "cfg": cfg,
+                                "sampler_name": sampler,
+                                "scheduler": scheduler,
+                                "denoise": denoise}},
+        "vae": {"class_type": "VAEDecode",
+                "inputs": {"samples": ["ksampler", 0], "vae": ["ckpt", 2]}},
+        "save": {"class_type": "SaveImage",
+                 "inputs": {"images": ["vae", 0], "filename_prefix": filename_prefix}},
+    }
+
+
+def build_facedetailer_workflow(
+    ref_image_name,
+    frame_image_name,
+    positive,
+    negative,
+    ckpt=DEFAULT_CKPT,
+    detector="bbox/face_yolov8m.pt",
+    seed=None,
+    steps=28,
+    cfg=7.0,
+    sampler="dpmpp_2m",
+    scheduler="karras",
+    denoise=0.5,
+    ipadapter_weight=0.6,
+    weight_type="linear",
+    embeds_scaling="V only",
+    guide_size=512,
+    max_size=1024,
+    bbox_threshold=0.5,
+    bbox_dilation=10,
+    bbox_crop_factor=3.0,
+    noise_mask_feather=20,
+    force_inpaint=True,
+    filename_prefix="manju_fd",
+):
+    """FaceDetailer 局部脸 inpaint 工作流 (Impact Pack)。
+
+    用途(2026-07-22 治"化妆浓/下眼帘重"): inswapper_128 是 identity-only blend, 保留
+    target(i2v 源帧)的妆/眼帘 texture → 换立绘参考没差(已证伪)。改用 FaceDetailer: 检脸
+    → 裁脸 crop → img2img 重绘脸区(只动脸, noise_mask 把背景/身体钉死) + IPAdapter(立绘 ref)
+    锁身份 → paste 回。prompt 直接指挥"素颜/薄下眼帘", denoise 控改动幅度。
+
+    链: ckpt → unified(PLUS FACE) → ipa(ref 立绘, weight 锁身份) → FaceDetailer(model=ipa)
+    ‖ UltralyticsDetectorProvider(face_yolov8m) → bbox_detector
+    ‖ LoadImage(frame) → image
+    FaceDetailer output[0]=修好的整帧(只脸区变)。
+    """
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    return {
+        "ckpt": {"class_type": "CheckpointLoaderSimple",
+                 "inputs": {"ckpt_name": ckpt}},
+        "ref": {"class_type": "LoadImage",
+                "inputs": {"image": ref_image_name}},
+        "frame": {"class_type": "LoadImage",
+                  "inputs": {"image": frame_image_name}},
+        "det": {"class_type": "UltralyticsDetectorProvider",
+                "inputs": {"model_name": detector}},
+        "unified": {"class_type": "IPAdapterUnifiedLoader",
+                    "inputs": {"model": ["ckpt", 0],
+                               "preset": "PLUS FACE (portraits)"}},
+        "ipa": {"class_type": "IPAdapterAdvanced",
+                "inputs": {"model": ["unified", 0],
+                           "ipadapter": ["unified", 1],
+                           "image": ["ref", 0],
+                           "weight": ipadapter_weight,
+                           "weight_type": weight_type,
+                           "combine_embeds": "concat",
+                           "start_at": 0.0,
+                           "end_at": 1.0,
+                           "embeds_scaling": embeds_scaling}},
+        "pos": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": positive}},
+        "neg": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["ckpt", 1], "text": negative}},
+        "fd": {"class_type": "FaceDetailer",
+               "inputs": {"image": ["frame", 0],
+                          "model": ["ipa", 0],
+                          "clip": ["ckpt", 1],
+                          "vae": ["ckpt", 2],
+                          "positive": ["pos", 0],
+                          "negative": ["neg", 0],
+                          "bbox_detector": ["det", 0],
+                          "wildcard": "",
+                          "guide_size": guide_size,
+                          "guide_size_for": True,
+                          "max_size": max_size,
+                          "seed": seed,
+                          "steps": steps,
+                          "cfg": cfg,
+                          "sampler_name": sampler,
+                          "scheduler": scheduler,
+                          "denoise": denoise,
+                          "feather": 5,
+                          "noise_mask": True,
+                          "force_inpaint": force_inpaint,
+                          "bbox_threshold": bbox_threshold,
+                          "bbox_dilation": bbox_dilation,
+                          "bbox_crop_factor": bbox_crop_factor,
+                          "sam_detection_hint": "center-1",
+                          "sam_dilation": 0,
+                          "sam_threshold": 0.93,
+                          "sam_bbox_expansion": 0,
+                          "sam_mask_hint_threshold": 0.7,
+                          "sam_mask_hint_use_negative": "False",
+                          "drop_size": 10,
+                          "cycle": 1,
+                          "inpaint_model": False,
+                          "noise_mask_feather": noise_mask_feather}},
+        "save": {"class_type": "SaveImage",
+                 "inputs": {"images": ["fd", 0], "filename_prefix": filename_prefix}},
+    }
+
+
 def build_txt2img_workflow(
     positive,
     negative,

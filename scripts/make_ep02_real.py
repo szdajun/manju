@@ -35,6 +35,8 @@ def latest(pat):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--shots", default="1,2,3,4,5,6,7,8,9,10")
+    ap.add_argument("--i2v-dir", default=I2V,
+                    help="i2v 源目录(默认原 i2v; 换脸版传 _facelock)")
     ap.add_argument("--out", default=os.path.join(OUT, "ep02_real.mp4"))
     ap.add_argument("--xfade", type=float, default=0.4)
     ap.add_argument("--transition", default="fade",
@@ -48,9 +50,13 @@ def main():
 
     segs_av = []
     for s in shots:
-        src = latest(os.path.join(I2V, f"manju_wan_shot{s:02d}_*.mp4"))
+        # Wan 写实命名(manju_wan_shotNN_*)优先; 兜底 Seedance 命名(ep02_shotNN.mp4)。
+        # 2026-07-23: 换模型族 Seedance rollout 产物在 _seedance/ 下用后者命名。
+        src = (latest(os.path.join(args.i2v_dir, f"manju_wan_shot{s:02d}_*.mp4"))
+               or latest(os.path.join(args.i2v_dir, f"ep02_shot{s:02d}.mp4")))
         if not src:
-            print(f"[ERR] i2v 片段缺: manju_wan_shot{s:02d}_*.mp4")
+            print(f"[ERR] i2v 片段缺: manju_wan_shot{s:02d}_*.mp4 或 ep02_shot{s:02d}.mp4 "
+                  f"in {args.i2v_dir}")
             return 1
         seg_v = os.path.join(tmp, f"seg{s:02d}.mp4")
         if not os.path.exists(seg_v):

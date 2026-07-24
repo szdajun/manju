@@ -7,20 +7,22 @@ REM Windows kohya 已知坑:
 REM   --max_data_loader_n_workers 0 避 spawn 子进程 MemoryError
 REM   (diffusers/autoencoders/vae.py OOM on import, 2026-07-23 HANDOFF 撞过)
 REM
-REM SDXL 关键点:
+REM SDXL 关键点 (12GB VRAM):
 REM   - 必须用 sdxl_train_network.py (train_network.py 不识 SDXL 双文本编码器)
-REM   - 三个文本编码器 cache 必须开, 否则步 0 OOM on 12GB
-REM   - 网络只 unet, text encoder 已 base 大, 锁小 VRAM
+REM   - --full_bf16 让 text encoder 2 走 bf16 (~850MB) 而非 fp32 (~1.7GB),
+REM     否则 PyTorch CPU caching allocator 碎片致 6.5MB 都给不出 (12GB 实测 OOM)
+REM   - 不开 --cache_text_encoder_outputs (无 --lowram 时 text encoder 留 CPU, 12GB 余量够)
+REM   - HF online 一次, 拉 laion/CLIP-ViT-bigG-14 tokenizer (SDXL text encoder 2)
+REM   - python.exe 直调 (kohya venv accelerate.exe 缺 psutil)
 REM
 REM Usage: just run.
 
 setlocal
 set PYTHONIOENCODING=utf-8
 set NO_PROXY=127.0.0.1,localhost
-REM HF network unstable (WinError 10054 on list_repo_templates); force offline
-set HF_HUB_OFFLINE=1
-set TRANSFORMERS_OFFLINE=1
-set HF_DATASETS_OFFLINE=1
+
+REM CPU 分配器: 避 PyTorch CPU caching allocator 碎片 (Windows 不支持, 但不报错)
+set PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 set TRAIN_DATA=../manju/assets/characters/kid_dance/train_data
 set CKPT_DIR=../manju/output/ep05_lora_v1/checkpoints
@@ -41,8 +43,8 @@ echo [Dataset] %TRAIN_DATA%
 echo [Output]  %CKPT_DIR%
 echo [Mirror]  %COMFY_LORAS%\%OUTPUT_NAME%.safetensors
 
-REM 沿用 ep03 v3 launcher 套路: 走 kohya venv 的 accelerate
-"..\kohya_ss\.venv\Scripts\accelerate.exe" launch --num_cpu_threads_per_process 2 ^
+REM 沿用 lihui launcher 范式: 走 kohya venv 的 python 直调
+"..\kohya_ss\.venv\Scripts\python.exe" ^
   "..\kohya_ss\sd-scripts\sdxl_train_network.py" ^
   --pretrained_model_name_or_path "../ComfyUI/models/checkpoints/sd_xl_base_1.0.safetensors" ^
   --train_data_dir "%TRAIN_DATA%" ^
@@ -61,18 +63,15 @@ REM 沿用 ep03 v3 launcher 套路: 走 kohya venv 的 accelerate
   --lr_scheduler_num_cycles 1 ^
   --optimizer_type AdamW8bit ^
   --mixed_precision bf16 ^
+  --full_bf16 ^
   --gradient_checkpointing ^
   --network_train_unet_only ^
   --sdpa ^
-  --lowram ^
   --save_precision bf16 ^
   --save_every_n_steps 400 ^
   --caption_extension .txt ^
   --cache_latents ^
   --cache_latents_to_disk ^
-  --cache_text_encoder_outputs ^
-  --cache_text_encoder_outputs_to_disk ^
-  --no_half_vae ^
   --max_data_loader_n_workers 0 ^
   --seed 42 ^
   --logging_dir "%LOG_DIR%"

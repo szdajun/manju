@@ -37,3 +37,9 @@ scripts/face_warp_eyelid.py
 
 # 本地 ComfyUI 连接配置(WSL 8189 端口, 非凭据但本机特定)
 _wsl8189.json
+
+# ComfyUI /object_info 大体量 JSON dump(由 probe_wan_nodes.py 缓存, 不入 git)
+scripts/ep05/_objinfo.json
+scripts/ep05/_tmp_8188.json
+scripts/ep05/_wan_stack.json
+scripts/ep05/_probe_summary.json

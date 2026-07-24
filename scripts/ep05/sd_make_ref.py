@@ -1,4 +1,8 @@
-"""Generate the kid_dance SDXL reference image through ComfyUI."""
+"""Generate the kid_dance SD1.5 (Counterfeit-V3.0) reference image through ComfyUI.
+
+T2.b fix: SDXL OOM on RTX 3060 12GB. SD1.5 Counterfeit is anime-native (~4GB),
+plenty of VRAM for LoRA training + sampling.
+"""
 
 from __future__ import annotations
 import httpx
@@ -7,18 +11,23 @@ import time
 
 SERVER = "http://127.0.0.1:8188"
 PROMPT = (
-    "masterpiece, best quality, anime cartoon style, child character, asian little girl age 6-8, "
-    "large head small body chibi proportion 1:3, full body mid-shot from knees up, red sleeveless crop top, "
-    "white loose baggy harem pants with drawstring, white sneakers, soft pastel park background, "
-    "confident smug expression with one eyebrow raised and crooked smile, arms relaxed at sides, soft daylight, illustration"
+    "masterpiece, best quality, anime cartoon style, 1girl, chibi, child, little girl age 6, "
+    "very young child, baby face, round face, huge eyes, small body, "
+    "asian little girl, large head small body chibi proportion 1:2, "
+    "bright red sleeveless crop top, crimson red sleeveless tank top, white loose baggy harem pants, white sneakers, "
+    "soft pastel park background, smug confident expression, one eyebrow raised crooked smile, "
+    "cowboy shot from knees up, arms relaxed at sides, illustration"
 )
 NEG = (
-    "mature, adult, teenager, teen, sensual, realistic, photograph, 3d, ugly, deformed, extra limbs, hat, sunglasses"
+    "mature, adult, teenager, teen, sensual, sexy, revealing, navel, abs, "
+    "realistic, photograph, 3d, ugly, deformed, extra limbs, hat, sunglasses, mature body, "
+    "big breast, slim waist"
 )
-CHECKPOINT = "sd_xl_base_1.0.safetensors"
-WIDTH = 1024
-HEIGHT = 1024
-SEED = 7
+SEED = 23
+CHECKPOINT = "Counterfeit-V3.0_fix_fp16.safetensors"
+WIDTH = 512
+HEIGHT = 768
+SEED = 11
 STEPS = 28
 CFG = 7.0
 

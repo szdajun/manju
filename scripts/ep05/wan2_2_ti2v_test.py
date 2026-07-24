@@ -84,31 +84,25 @@ def build_workflow(uploaded_image: str) -> dict:
             },
         },
         "6": {
-            "class_type": "WanVideoEncode",
-            "inputs": {
-                "vae": ["3", 0],
-                "image": ["1", 0],
-                "enable_vae_tiling": False,
-                "tile_x": 272,
-                "tile_y": 272,
-                "tile_stride_x": 144,
-                "tile_stride_y": 128,
-            },
-        },
-        "7": {
-            "class_type": "WanVideoEmptyEmbeds",
+            "class_type": "WanVideoImageToVideoEncode",
             "inputs": {
                 "width": WIDTH,
                 "height": HEIGHT,
                 "num_frames": NUM_FRAMES,
-                "extra_latents": ["6", 0],
+                "noise_aug_strength": 0.0,
+                "start_latent_strength": 1.0,
+                "end_latent_strength": 1.0,
+                "force_offload": True,
+                "vae": ["3", 0],
+                "start_image": ["1", 0],
+                "tiled_vae": False,
             },
         },
-        "8": {
+        "7": {
             "class_type": "WanVideoSampler",
             "inputs": {
                 "model": ["2", 0],
-                "image_embeds": ["7", 0],
+                "image_embeds": ["6", 0],
                 "text_embeds": ["5", 0],
                 "steps": 12,
                 "cfg": 5.0,
@@ -120,11 +114,11 @@ def build_workflow(uploaded_image: str) -> dict:
                 "rope_function": "comfy",
             },
         },
-        "9": {
+        "8": {
             "class_type": "WanVideoDecode",
             "inputs": {
                 "vae": ["3", 0],
-                "samples": ["8", 0],
+                "samples": ["7", 0],
                 "enable_vae_tiling": False,
                 "tile_x": 272,
                 "tile_y": 272,
@@ -132,10 +126,10 @@ def build_workflow(uploaded_image: str) -> dict:
                 "tile_stride_y": 128,
             },
         },
-        "10": {
+        "9": {
             "class_type": "VHS_VideoCombine",
             "inputs": {
-                "images": ["9", 0],
+                "images": ["8", 0],
                 "frame_rate": FPS,
                 "loop_count": 0,
                 "filename_prefix": "ep05_wan2_2_test",
@@ -164,7 +158,7 @@ def invoke_and_wait(workflow: dict, timeout_seconds: int = 3600) -> Path:
             status = record.get("status", {})
             if status.get("status_str") == "error":
                 raise RuntimeError(json.dumps(status, ensure_ascii=False, indent=2))
-            outputs = record.get("outputs", {}).get("10", {})
+            outputs = record.get("outputs", {}).get("9", {})
             entries = outputs.get("gifs") or outputs.get("videos") or []
             if entries:
                 item = entries[0]

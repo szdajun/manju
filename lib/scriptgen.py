@@ -358,6 +358,7 @@ def gen_script(
     ep: str = "04",
     characters_spec: dict | None = None,
     *,
+    scenes: list | None = None,     # P1-2: 场景列表 (novel_extract 产出, 供场景资产)
     temperature: float = 0.4,
     max_tokens: int = 3000,
     dry_run: bool = False,
@@ -400,5 +401,7 @@ def gen_script(
         eye_fix=sb.get("eye_fix"),
         char_overrides=char_overrides, expected_n_shots=n_shots,
     )
+    if scenes:
+        script["scenes"] = [str(s) for s in scenes if str(s).strip()]  # P1-2 场景资产
     dump_json(script, out_path)
     return script

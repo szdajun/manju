@@ -181,6 +181,8 @@ def build_face_body_shot_workflow(
     scheduler="karras",
     weight_face=0.95,          # 脸 ref weight (沿用 ep02 验证值)
     weight_body=0.70,          # 全身 ref weight (调研推荐值, 待实测调)
+    scene_ref_name=None,       # P1-2 场景参考图 (空景) → 锁背景
+    weight_scene=0.5,          # 场景 IPAdapter weight (低, 防压角色)
     weight_type="linear",
     embeds_scaling="V only",
     denoise=1.0,
@@ -204,7 +206,7 @@ def build_face_body_shot_workflow(
     """
     if seed is None:
         seed = int.from_bytes(os.urandom(4), "big") % (2**32)
-    return {
+    wf = {
         "ckpt": {"class_type": "CheckpointLoaderSimple",
                  "inputs": {"ckpt_name": ckpt}},
         "ref_face": {"class_type": "LoadImage",
@@ -256,6 +258,23 @@ def build_face_body_shot_workflow(
         "save": {"class_type": "SaveImage",
                  "inputs": {"images": ["vae", 0], "filename_prefix": filename_prefix}},
     }
+    # P1-2 场景锁 (可选): 第 3 个 IPAdapter (标准 PLUS) 吃场景参考图, 锁背景.
+    # 场景 adapter 用独立 IPAdapterUnifiedLoader (preset "PLUS" 非 FACE) → 标准 ip-adapter-plus_sdxl_vit-h.
+    if scene_ref_name:
+        wf["ref_scene"] = {"class_type": "LoadImage", "inputs": {"image": scene_ref_name}}
+        wf["unified_scene"] = {"class_type": "IPAdapterUnifiedLoader",
+                               "inputs": {"model": ["ckpt", 0], "preset": "PLUS (high strength)"}}
+        wf["ipa_scene"] = {"class_type": "IPAdapterAdvanced",
+                           "inputs": {"model": ["ipa_body", 0],
+                                      "ipadapter": ["unified_scene", 1],
+                                      "image": ["ref_scene", 0],
+                                      "weight": weight_scene,
+                                      "weight_type": "linear",
+                                      "combine_embeds": "concat",
+                                      "start_at": 0.0, "end_at": 1.0,
+                                      "embeds_scaling": "V only"}}
+        wf["ksampler"]["inputs"]["model"] = ["ipa_scene", 0]
+    return wf
 
 
 def build_facedetailer_workflow(

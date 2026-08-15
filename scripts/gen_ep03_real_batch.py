@@ -81,6 +81,10 @@ def main():
     # orchestrator 接入: 角色立绘可从剧本数据透传 (剧本 characters 优先)
     ap.add_argument("--ref-face", default=None, help="脸 ref 图路径 (默认剧本 characters[主角].face_ref)")
     ap.add_argument("--ref-body", default=None, help="全身 ref 图路径 (默认剧本 characters[主角].body_ref)")
+    # P1-2 场景锁: 场景参考图 (空景) → 第 3 个 IPAdapter 锁背景
+    ap.add_argument("--scene-ref", default=None, help="场景参考图路径 (assets/scenes/*.png, 锁背景)")
+    ap.add_argument("--weight-scene", type=float, default=0.5,
+                    help="场景 IPAdapter weight (默认 0.5, 低防压角色)")
     args = ap.parse_args()
 
     # 读剧本数据 (自动探测 output/epXX/script.json / scripts/epXX.json / lib.epXX_shots)
@@ -108,6 +112,10 @@ def main():
     body_name = c.upload_image(ref_body) if not args.face_only else None
     if body_name:
         print(f"[upload] ref body -> {body_name}")
+    scene_name = None
+    if args.scene_ref and os.path.exists(args.scene_ref):
+        scene_name = c.upload_image(args.scene_ref)
+        print(f"[upload] scene -> {scene_name} (weight {args.weight_scene})")
     print(f"[cfg] {args.ckpt}  face w={args.weight_face}  body w={args.weight_body if body_name else 'N/A'}  "
           f"face-only={args.face_only}  关键帧 {args.width}x{args.height}  cfg={args.cfg}  镜数 {shots}\n")
 
@@ -137,9 +145,10 @@ def main():
                 ckpt=args.ckpt, seed=args.seed,
                 width=args.width, height=args.height, cfg=args.cfg,
                 weight_face=args.weight_face, weight_body=args.weight_body,
+                scene_ref_name=scene_name, weight_scene=args.weight_scene,
                 filename_prefix=f"{prefix}{s:02d}",
             )
-            mode = "DUAL face+body"
+            mode = "DUAL face+body" + ("+scene" if scene_name else "")
         else:
             wf = build_face_shot_workflow(
                 ref_image_name=face_name,

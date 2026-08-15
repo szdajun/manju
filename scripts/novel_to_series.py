@@ -102,6 +102,7 @@ def main():
         result = gen_script(
             subject=entities["subject"], title=title, n_shots=args.shots,
             style=args.style, ep=str(ep_num), characters_spec=chars,
+            scenes=entities["scenes"],
             temperature=args.temperature, max_tokens=args.max_tokens,
             out_dir=os.path.join(out_root, f"ep{ep_num}"),
         )

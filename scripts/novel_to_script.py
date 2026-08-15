@@ -70,6 +70,7 @@ def main():
     result = gen_script(
         subject=entities["subject"], title=title, n_shots=args.shots,
         style=args.style, ep=args.ep, characters_spec=entities["characters"],
+        scenes=entities["scenes"],
         temperature=args.temperature, max_tokens=args.max_tokens,
         dry_run=args.dry_run, out_dir=args.out,
     )

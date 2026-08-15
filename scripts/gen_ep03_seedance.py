@@ -22,7 +22,7 @@ sys.path.insert(0, MANJU)
 # 强制 MiniMax TTS (对齐 voice_ep03.py 拍板) — ⚠ 必须在 import lib.tts 之前设,
 # 否则 lib.tts 在 import 时读 PROVIDER 拿到默认 edge (不支持 speed kwarg)
 os.environ.setdefault("MANJU_TTS", "minimax")
-from lib.video_gen import generate  # noqa: E402  # provider 由 MANJU_VIDEOGEN 切换 (seedance/h3_local/ltx_local)
+from lib.video_gen import generate, _extract_last_frame  # noqa: E402  # provider 由 MANJU_VIDEOGEN 切换 (seedance/h3_local/ltx_local)
 from lib.storyboard import (  # noqa: E402
     LINE_TYPE_AMBIENT, LINE_TYPE_DIALOG, LINE_TYPE_VOICEOVER,
     character, frame_chars, line_type, load_script, shot, speaker)
@@ -167,6 +167,9 @@ def main():
     # 2026-08-15: 官方 h3-prompt-writing 六段式 prompt (对照实验验证四模式), legacy 保留回退
     ap.add_argument("--prompt-style", choices=["official", "legacy"], default="official",
                     help="H3 prompt 构建: official=官方六段式 (默认) / legacy=旧中文指令")
+    # 2026-08-15 P0: 尾帧衔接 — 单人无对白镜用上镜尾帧当首帧, 跨镜不跳变 (LocalMiniDrama 参考)
+    ap.add_argument("--tail-link", action="store_true",
+                    help="尾帧衔接: 单人无对白镜 (H3 ImageToVideo) 用上一镜输出尾帧作首帧")
     args = ap.parse_args()
 
     script = load_script(args.ep)
@@ -296,6 +299,21 @@ def main():
             else:
                 # 非 h3 provider (seedance/ltx): 保持 legacy prompt + seedance kw
                 kw.update({"ratio": "9:16", "resolution": args.resolution})
+            # 尾帧衔接 (--tail-link, P0): 单人无对白镜用上镜输出尾帧作首帧.
+            # ⚠ 只对 H3 单人 ImageToVideo (非对白/非双人) 生效 — 对白/双人的 image 是身份参考,
+            #    尾帧会漂身份. 上镜 mp4 缺 → 优雅回退 keyframe.
+            if args.tail_link and PROVIDER == "h3_local" and lt != LINE_TYPE_DIALOG:
+                fc_now = [c for c in (frame_chars(script, s) or [])
+                          if c in script["characters"]]
+                if len(fc_now) < 2:
+                    prev_mp4 = os.path.join(out, f"{prefix}{s - 1:02d}.mp4")
+                    if os.path.exists(prev_mp4):
+                        tail_png = os.path.join(out, f"_tail_{s - 1:02d}.png")
+                        if not os.path.exists(tail_png):
+                            _extract_last_frame(prev_mp4, tail_png)
+                        src = tail_png
+                        print(f"[tail-link] shot{s:02d} 首帧=shot{s - 1:02d} 尾帧",
+                              flush=True)
             generate(src, prompt, out_path, **kw)
             ok.append(s)
         except Exception as e:

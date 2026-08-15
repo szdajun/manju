@@ -344,6 +344,70 @@ def test_make_uses_script_line(tmp_path):
     assert calls["run"].called               # ffmpeg 被 mock 掉 (避免真跑)
 
 
+# ---- 尾帧衔接 (2026-08-15 P0) ----
+
+def test_i2v_h3_tail_link(tmp_path):
+    """--tail-link: 单人无对白镜 (ambient shot3) 用上镜输出尾帧作首帧; 无上一镜回退 keyframe."""
+    from scripts import gen_ep03_seedance as i2v
+    script = _line_type_script()
+    root = str(tmp_path)
+    kf_dir = os.path.join(root, "kf"); os.makedirs(kf_dir, exist_ok=True)
+    out_dir = os.path.join(root, "out"); os.makedirs(out_dir, exist_ok=True)
+    for s in (1, 2, 3):
+        open(os.path.join(kf_dir, f"ep04_shot{s:02d}_1.png"), "w").close()
+    # 造 shot02 输出 (tail-link 从中取尾帧)
+    open(os.path.join(out_dir, "ep04_shot02.mp4"), "w").close()
+
+    gen_calls = []
+    with patch("scripts.gen_ep03_seedance.load_script", return_value=script), \
+         patch("scripts.gen_ep03_seedance.generate",
+               side_effect=lambda src, prompt, out, **kw: gen_calls.append(
+                   {"src": src, "prompt": prompt, "out": out, "kw": kw})), \
+         patch("scripts.gen_ep03_seedance._extract_last_frame") as _elf, \
+         patch("scripts.gen_ep03_seedance.synthesize",
+               side_effect=lambda text, out, **kw: open(out, "w").write("x")), \
+         patch("scripts.gen_ep03_seedance._pad_audio_to_duration"), \
+         patch("lib.video_gen.PROVIDER", "h3_local"):
+        # 只跑 shot3 (ambient): 上一镜 shot02 有 mp4 → 尾帧衔接
+        _run_main(i2v, ["--ep", "04", "--shots", "3",
+                        "--kf-dir", kf_dir, "--out", out_dir, "--tail-link"])
+
+    assert len(gen_calls) == 1
+    shot3 = gen_calls[0]
+    assert "_tail_02.png" in shot3["src"]          # 用了尾帧 png
+    assert _elf.called                              # 调用了尾帧提取
+    assert "ep04_shot02.mp4" in _elf.call_args[0][0]  # 提取的是 shot02.mp4 尾帧
+
+
+def test_i2v_h3_no_tail_link_uses_keyframe(tmp_path):
+    """默认 (无 --tail-link): 即使有上镜 mp4 也用 keyframe."""
+    from scripts import gen_ep03_seedance as i2v
+    script = _line_type_script()
+    root = str(tmp_path)
+    kf_dir = os.path.join(root, "kf"); os.makedirs(kf_dir, exist_ok=True)
+    out_dir = os.path.join(root, "out"); os.makedirs(out_dir, exist_ok=True)
+    for s in (1, 2, 3):
+        open(os.path.join(kf_dir, f"ep04_shot{s:02d}_1.png"), "w").close()
+    open(os.path.join(out_dir, "ep04_shot02.mp4"), "w").close()
+
+    gen_calls = []
+    with patch("scripts.gen_ep03_seedance.load_script", return_value=script), \
+         patch("scripts.gen_ep03_seedance.generate",
+               side_effect=lambda src, prompt, out, **kw: gen_calls.append(
+                   {"src": src, "prompt": prompt, "out": out, "kw": kw})), \
+         patch("scripts.gen_ep03_seedance._extract_last_frame"), \
+         patch("scripts.gen_ep03_seedance.synthesize",
+               side_effect=lambda text, out, **kw: open(out, "w").write("x")), \
+         patch("scripts.gen_ep03_seedance._pad_audio_to_duration"), \
+         patch("lib.video_gen.PROVIDER", "h3_local"):
+        _run_main(i2v, ["--ep", "04", "--shots", "3",
+                        "--kf-dir", kf_dir, "--out", out_dir])
+
+    assert len(gen_calls) == 1
+    shot3 = gen_calls[0]
+    assert "ep04_shot03_1.png" in shot3["src"]   # 仍 keyframe
+
+
 def _run_main(module, argv):
     """调模块 main() 但替换 sys.argv (绕 argparse)."""
     import importlib

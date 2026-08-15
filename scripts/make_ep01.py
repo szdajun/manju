@@ -112,9 +112,13 @@ def wrap_text(text, max_chars=9, hard=15):
 def render_subtitle(text, out):
     """底部黄字黑描边 + 半透明黑底圆角条。720×1280 透明 PNG。"""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    lines = wrap_text(text or "")
+    if not lines:
+        # 空台词 (ambient 镜): 存透明 PNG, 不加字幕
+        img.save(out)
+        return
     d = ImageDraw.Draw(img)
     font = ImageFont.truetype(FONT, 42)
-    lines = wrap_text(text)
     line_h = 56
     total_h = len(lines) * line_h
     y0 = H - total_h - 120
@@ -178,16 +182,23 @@ def gen_seg_dyn(src, dst, dur, sub_png, factor=3.0):
 def gen_seg_i2v(src, dst, sub_png, fps=V4_FPS):
     """写实 i2v 片段: 已是动态视频(5s@24fps), 不 KB 不慢放。
     scale+crop 到 720×1280(源 480×864 lanczos 1.5× 上采) + 字幕 overlay。fps 保原生流畅。
+
+    ⚠ 2026-08-06 端到端整合: `-map 0:a?` 保留源音频 (H3 原生音: 对话语音/环境音).
+      历史 -map [v] 只映射视频 → H3 自带音到组装全丢 (端到端根因 bug, 已修).
+      `0:a?` 可选映射: 无音源 (seedance/ltx) 自动跳过, 旧流零回归.
     """
     base = (f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,"
             f"crop={W}:{H},fps={fps}")
     if sub_png:
         fc = f"[0:v]{base}[bg];[bg][1:v]overlay=0:0:shortest=1[v]"
         run([FFMPEG, "-y", "-i", src, "-loop", "1", "-i", sub_png,
-             "-filter_complex", fc, "-map", "[v]"]
+             "-filter_complex", fc, "-map", "[v]", "-map", "0:a?",
+             "-c:a", "aac", "-b:a", "128k", "-shortest"]
             + enc_args(fps=fps, ts=V4_TS) + [dst])
     else:
-        run([FFMPEG, "-y", "-i", src, "-vf", base]
+        run([FFMPEG, "-y", "-i", src, "-vf", base,
+             "-map", "0:v", "-map", "0:a?", "-c:a", "aac", "-b:a", "128k",
+             "-shortest"]
             + enc_args(fps=fps, ts=V4_TS) + [dst])
 
 
@@ -228,19 +239,77 @@ def add_silent_audio(video, dst):
          "-shortest", dst])
 
 
-def mux_seg_audio(seg_video, voice_mp3, dst):
-    """视频段 + 本镜旁白 → 音画段。旁白前 LEAD_IN_MS 静音, 后 apad 到视频时长(-shortest 截)。
+def _has_audio_stream(path):
+    """探测视频文件是否有音轨 (H3 自带音 vs seedance/ltx 无声)."""
+    try:
+        out = subprocess.run(
+            [FFPROBE, "-v", "error", "-select_streams", "a",
+             "-show_entries", "stream=index", "-of", "csv=p=0", path],
+            capture_output=True, text=True)
+        return bool(out.stdout.strip())
+    except Exception:
+        return False
 
-    无旁白文件 → 退静音轨(anullsrc), v3 仍可建(某镜没配音不卡整片)。
+
+def resolve_mux_mode(has_voice, has_orig):
+    """组装音频路由纯函数 (provider 无关): has_voice × has_orig 四象限.
+
+    has_voice=T & has_orig=T → mix     (H3 旁白镜: 环境音 + 叠 TTS 旁白)
+    has_voice=T & has_orig=F → tts     (seedance/ltx 无声 provider: TTS 覆盖)
+    has_voice=F & has_orig=T → keep    (H3 环境音 / 对话内嵌: 保留原音)
+    has_voice=F & has_orig=F → silent  (全无音: 静音轨占位, 保 concat 音频链)
+
+    ⚠ H3 对话镜的 TTS 不进 voice_dir (i2v 阶段内联驱动口型) → has_voice=F,
+      走 keep 保留 H3 内嵌语音, 不重复叠音.
     """
-    if voice_mp3 and os.path.exists(voice_mp3):
+    if has_voice and has_orig:
+        return "mix"
+    if has_voice:
+        return "tts"
+    if has_orig:
+        return "keep"
+    return "silent"
+
+
+def mux_seg_audio(seg_video, voice_mp3, dst, keep_orig_audio=False):
+    """视频段 + 本镜音频 → 音画段. 自动按 has_voice × has_orig 路由 (见 resolve_mux_mode).
+
+    mode=mix (H3 旁白镜): 保留 H3 环境音 (0.4) + 叠 TTS 旁白 (1.0) → amix.
+      ⚠ 2026-08-06 修音量: amix 默认 normalize=1 压低输出 (实测 max -10dB vs TTS
+      -0.2dB) → normalize=0 + 显式音量 + alimiter 防削波.
+    mode=tts (seedance): TTS 覆盖 (历史行为), 前 LEAD_IN_MS 静音 + apad 到视频长.
+    mode=keep (H3 环境音/对话内嵌): 保留原音轨 (音画直接复制).
+    mode=silent: 静音轨 (anullsrc), 保 concat 音频链不断.
+
+    keep_orig_audio 历史显式混音开关, 现被自动路由取代 (H3 有原音即混), 参数保留兼容.
+    """
+    has_voice = bool(voice_mp3) and os.path.exists(voice_mp3)
+    has_orig = _has_audio_stream(seg_video)
+    mode = resolve_mux_mode(has_voice, has_orig)
+    if mode == "mix":
+        # H3 环境音 + TTS 旁白: amix 混音 (normalize=0 + alimiter 治低音量)
+        # ⚠ 2026-08-07 修: TTS 单声道上混立体声会被 amix 内部 -3dB 平衡衰减
+        # (旁白从 -9.3dB 掉到 -12dB). 显式 pan=stereo 复制单声道到双声道 (不衰减).
+        fc = (f"[1:a]aresample=44100,adelay={LEAD_IN_MS},"
+              f"pan=stereo|c0=c0|c1=c0,volume=1.0[voice];"
+              f"[0:a]volume=0.4[bg];"
+              f"[bg][voice]amix=inputs=2:duration=first:dropout_transition=0:normalize=0"
+              f"[a0];[a0]alimiter=limit=0.95[a]")
+        run([FFMPEG, "-y", "-i", seg_video, "-i", voice_mp3,
+             "-filter_complex", fc, "-map", "0:v", "-map", "[a]",
+             "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
+             "-shortest", dst])
+    elif mode == "tts":
         fc = (f"[1:a]aresample=44100,adelay={LEAD_IN_MS}|{LEAD_IN_MS},"
               f"apad,atrim=0:99[a]")
         run([FFMPEG, "-y", "-i", seg_video, "-i", voice_mp3,
              "-filter_complex", fc, "-map", "0:v", "-map", "[a]",
              "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
              "-shortest", dst])
-    else:
+    elif mode == "keep":
+        # H3 环境音/对话内嵌: 保留原音轨, 音画复制 (不叠 TTS)
+        run([FFMPEG, "-y", "-i", seg_video, "-c", "copy", dst])
+    else:  # silent
         dur = probe_dur(seg_video)
         run([FFMPEG, "-y", "-i", seg_video,
              "-f", "lavfi", "-t", f"{dur:.3f}",
@@ -274,6 +343,33 @@ def concat_xfade_av(segs, durs, dst, xfade=XFADE, fps=FPS, ts=TIMESCALE,
     run([FFMPEG, "-y"] + inputs + ["-filter_complex", fc,
          "-map", "[vout]", "-map", "[aout]"] + enc_args(fps=fps, ts=ts)
          + ["-c:a", "aac", "-b:a", "128k", dst])
+
+
+def mix_bgm(video, bgm, dst, bgm_volume=0.30, duck=True):
+    """BGM 垫底混入成片 (2026-08-15, MiniMax Music 生成的健身 BGM).
+
+    video: 已组装成片 (含对白/旁白/环境音)
+    bgm:   音乐文件 (mp3/wav)
+    dst:   输出 mp4
+    bgm_volume: BGM 音量系数 (0-1, 默认 0.30 低调垫底)
+    duck:  True=侧链闪避 (对白时 BGM 自动压低, 保语音清晰) / False=纯混音
+
+    ffmpeg 侧链: [bgm][voice]sidechaincompress — 主输入=要压的 BGM, 次输入=侧链键 (语音).
+    对白响时 BGM 被压下去, 语音间隙 BGM 回上来.
+    """
+    dur = probe_dur(video)
+    if duck:
+        fc = (f"[0:a]asplit=2[va][vc];"
+              f"[1:a]atrim=0:{dur},asetpts=PTS-STARTPTS,volume={bgm_volume}[bg];"
+              f"[bg][vc]sidechaincompress=threshold=0.03:ratio=8:attack=30:release=400[duck];"
+              f"[va][duck]amix=inputs=2:duration=first:normalize=0[outa]")
+    else:
+        fc = (f"[1:a]atrim=0:{dur},asetpts=PTS-STARTPTS,volume={bgm_volume}[bg];"
+              f"[0:a][bg]amix=inputs=2:duration=first:normalize=0[outa]")
+    run([FFMPEG, "-y", "-i", video, "-i", bgm,
+         "-filter_complex", fc,
+         "-map", "0:v", "-map", "[outa]",
+         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", dst])
 
 
 def main():

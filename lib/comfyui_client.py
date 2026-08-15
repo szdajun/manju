@@ -610,24 +610,26 @@ class ComfyUIClient:
         os.makedirs(out_dir, exist_ok=True)
         saved = []
         for _node_id, node_out in (history_entry.get("outputs") or {}).items():
-            for img in node_out.get("images", []):
-                fname = img["filename"]
-                q = urllib.parse.urlencode({
-                    "filename": fname,
-                    "subfolder": img.get("subfolder", ""),
-                    "type": img.get("type", "output"),
-                })
-                with urllib.request.urlopen(f"{self.server}/view?{q}", timeout=120) as r:
-                    data = r.read()
-                local = os.path.join(out_dir, fname)
-                with open(local, "wb") as f:
-                    f.write(data)
-                saved.append(local)
+            # images = SaveImage; gifs = VHS_VideoCombine (视频); audio = SaveAudio/SaveAudioAdvanced (Music3)
+            for key in ("images", "gifs", "audio"):
+                for img in node_out.get(key, []) or []:
+                    fname = img["filename"]
+                    q = urllib.parse.urlencode({
+                        "filename": fname,
+                        "subfolder": img.get("subfolder", ""),
+                        "type": img.get("type", "output"),
+                    })
+                    with urllib.request.urlopen(f"{self.server}/view?{q}", timeout=120) as r:
+                        data = r.read()
+                    local = os.path.join(out_dir, fname)
+                    with open(local, "wb") as f:
+                        f.write(data)
+                    saved.append(local)
         return saved
 
-    def generate(self, workflow, out_dir):
+    def generate(self, workflow, out_dir, timeout=900):
         pid = self.queue_prompt(workflow)
-        entry = self.wait_for_completion(pid)
+        entry = self.wait_for_completion(pid, timeout=timeout)
         return self.fetch_outputs(entry, out_dir)
 
     def queue_remaining(self):
@@ -636,3 +638,220 @@ class ComfyUIClient:
                    len(self._get_json("/queue").get("queue_pending", []))
         except Exception:
             return -1
+
+
+# ---- LTX-2.3 GGUF i2v (2026-08-06 免费本地 provider) ----
+
+LTX23_MODELS = {
+    "unet_gguf": "LTX-2.3-22B-distilled-1.1-Q8_0.gguf",
+    "gemma_gguf": "gemma-3-12b-it-IQ4_XS.gguf",
+    "text_proj": "ltx-2.3_text_projection_bf16.safetensors",
+    "distilled_lora": "ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors",
+    "video_vae": "LTX23_video_vae_bf16.safetensors",
+}
+LTX23_SIGMAS = "1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
+
+
+def build_ltx23_i2v_workflow(
+    image_name,
+    positive,
+    negative,
+    width=480,
+    height=832,          # 竖屏 (对齐关键帧 480x832)
+    length=25,           # 帧数 (step8; 25@24fps≈1.04s 单段)
+    seed=None,
+    strength=1.0,        # 首帧贴合度
+    frame_rate=24,
+    filename_prefix="ltx23_i2v",
+    models=None,
+    sigmas=None,
+):
+    """LTX-2.3 GGUF 图生视频 (免费本地, 2026-08-06 已验证单段).
+
+    用 LTXVImgToVideoConditionOnly (首帧 latent 注入) 而非旧 LTX-2B 的
+    LTXVImgToVideo. 采样器 = distilled 单阶段路径 (CFGGuider cfg=1 + euler_ancestral_cfg_pp
+    + ManualSigmas 8 步 flow-match), 对齐 fitness 侧 _ltx23_gguf_768.py.
+
+    ⚠ 本机 12G 显存单段上限 ~25-33 帧 (1.1s), 5s 镜需分段 (连续递进: 每段用上段末帧).
+    """
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    m = dict(LTX23_MODELS, **(models or {}))
+    return {
+        "clip": {"class_type": "DualCLIPLoaderGGUF", "inputs": {
+            "clip_name1": m["gemma_gguf"], "clip_name2": m["text_proj"], "type": "ltxv"}},
+        "pos": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["clip", 0], "text": positive}},
+        "neg": {"class_type": "CLIPTextEncode",
+                "inputs": {"clip": ["clip", 0], "text": negative}},
+        "unet": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": m["unet_gguf"]}},
+        "dist": {"class_type": "LoraLoaderModelOnly", "inputs": {
+            "model": ["unet", 0], "lora_name": m["distilled_lora"], "strength_model": 0.5}},
+        "loadframe": {"class_type": "LoadImage", "inputs": {"image": image_name}},
+        "resize": {"class_type": "ResizeImageMaskNode", "inputs": {
+            "input": ["loadframe", 0], "resize_type": "scale dimensions",
+            "resize_type.width": width, "resize_type.height": height,
+            "resize_type.crop": "disabled", "scale_method": "lanczos"}},
+        "empty": {"class_type": "EmptyLTXVLatentVideo", "inputs": {
+            "width": width, "height": height, "length": length, "batch_size": 1}},
+        "vae": {"class_type": "VAELoader", "inputs": {"vae_name": m["video_vae"]}},
+        "imgcond": {"class_type": "LTXVImgToVideoConditionOnly", "inputs": {
+            "vae": ["vae", 0], "image": ["resize", 0], "latent": ["empty", 0],
+            "strength": strength, "bypass": False}},
+        "cond": {"class_type": "LTXVConditioning", "inputs": {
+            "positive": ["pos", 0], "negative": ["neg", 0], "frame_rate": frame_rate}},
+        "guider": {"class_type": "CFGGuider", "inputs": {
+            "model": ["dist", 0], "positive": ["cond", 0], "negative": ["cond", 1],
+            "cfg": 1.0}},
+        "noise": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
+        "samp_sel": {"class_type": "KSamplerSelect",
+                     "inputs": {"sampler_name": "euler_ancestral_cfg_pp"}},
+        "sigmas": {"class_type": "ManualSigmas", "inputs": {"sigmas": sigmas or LTX23_SIGMAS}},
+        "ksampler": {"class_type": "SamplerCustomAdvanced", "inputs": {
+            "noise": ["noise", 0], "guider": ["guider", 0], "sampler": ["samp_sel", 0],
+            "sigmas": ["sigmas", 0], "latent_image": ["imgcond", 0]}},
+        "decode": {"class_type": "LTXVTiledVAEDecode", "inputs": {
+            "vae": ["vae", 0], "latents": ["ksampler", 0],
+            "horizontal_tiles": 1, "vertical_tiles": 1, "overlap": 6, "last_frame_fix": False}},
+        "vidcombine": {"class_type": "VHS_VideoCombine", "inputs": {
+            "images": ["decode", 0], "frame_rate": frame_rate, "loop_count": 0,
+            "filename_prefix": filename_prefix, "format": "video/h264-mp4",
+            "pingpong": False, "save_output": True}},
+    }
+
+
+# ---- H3 本地 (2026-08-06, 零成本替代 Seedance) ----
+
+H3_MODELS = {
+    "fl2va_gguf": "minimax_h3_fl2va_pruned_fp8_Q8_CR.gguf",   # 单人 ImageToVideo
+    "ref2va_gguf": "minimax-h3-ref2va-Q8_0.gguf",             # 双人 Ref2VA
+    "qwen3vl": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+    "video_vae": "minimax_h3_video_vae_fp16.safetensors",
+    "audio_vae": "minimax_h3_audio_vae_fp32.safetensors",
+    "turbo_lora": "minimax_h3_turbo_4step_ckpt500.safetensors",  # Turbo 加速 LoRA (steps 20→8)
+}
+
+
+def h3_length_from_duration(duration_s: float) -> int:
+    """H3 帧数: 17k+5 格 (24fps), 对齐官方公式."""
+    return max(5, round(duration_s * 24)) + (5 - (max(5, round(duration_s * 24)) % 17)) % 17
+
+
+def _h3_base_nodes(positive, width, height, length, seed, filename_prefix,
+                   unet_gguf, models=None, turbo=False):
+    """H3 公共节点: 模型加载 + 采样链 + 解码.
+
+    turbo=True → 加 MiniMax-H3-Turbo LoRA (steps 20→8) + SigmaShift (video=12,audio=6),
+    加速 ~2.5x (治 768x1344 的 2.5h 痛点). 基于 Abiray/MiniMax-H3-Turbo-Lora 官方 workflow.
+    """
+    m = dict(H3_MODELS, **(models or {}))
+    # 模型链: unet → (turbo: lora → sigma_shift) → scheduler/guider
+    model_ref = ["unet", 0]
+    steps = 20
+    if turbo:
+        steps = 8
+        model_ref = ["lora", 0]
+    nodes = {
+        "unet": {"class_type": "UnetLoaderGGUFDynamicVRAM", "inputs": {
+            "unet_name": unet_gguf}},
+        "clip": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": m["qwen3vl"], "type": "minimax", "device": "default"}},
+        "vae_v": {"class_type": "VAELoader", "inputs": {
+            "vae_name": m["video_vae"]}},
+        "vae_a": {"class_type": "VAELoader", "inputs": {
+            "vae_name": m["audio_vae"]}},
+        "pos": {"class_type": "CLIPTextEncode", "inputs": {
+            "clip": ["clip", 0], "text": positive}},
+        "sched": {"class_type": "BasicScheduler", "inputs": {
+            "model": model_ref, "scheduler": "simple", "steps": steps, "denoise": 1.0}},
+        "guider": {"class_type": "BasicGuider", "inputs": {
+            "model": model_ref, "conditioning": ["pos", 0]}},
+        "samp": {"class_type": "KSamplerSelect", "inputs": {
+            "sampler_name": "res_multistep"}},
+        "noise": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
+        "sampler": {"class_type": "SamplerCustomAdvanced", "inputs": {
+            "noise": ["noise", 0], "guider": ["guider", 0], "sampler": ["samp", 0],
+            "sigmas": ["sched", 0], "latent_image": ["cond", 1]}},
+        "dec_v": {"class_type": "VAEDecode", "inputs": {
+            "samples": ["sampler", 0], "vae": ["vae_v", 0]}},
+        "dec_a": {"class_type": "VAEDecodeAudio", "inputs": {
+            "samples": ["sampler", 0], "vae": ["vae_a", 0]}},
+        "create": {"class_type": "CreateVideo", "inputs": {
+            "images": ["dec_v", 0], "audio": ["dec_a", 0], "fps": 24, "loop_count": 0}},
+        "save": {"class_type": "SaveVideo", "inputs": {
+            "video": ["create", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "auto"}},
+    }
+    if turbo:
+        nodes["lora"] = {"class_type": "LoraLoaderModelOnly", "inputs": {
+            "model": ["unet", 0],
+            "lora_name": m["turbo_lora"], "strength_model": 1.0}}
+        nodes["sigma_shift"] = {"class_type": "MiniMaxH3SigmaShift", "inputs": {
+            "model": ["lora", 0], "shift_video": 12.0, "shift_audio": 6.0}}
+        # 采样模型改为 sigma_shift 输出
+        nodes["sched"]["inputs"]["model"] = ["sigma_shift", 0]
+        nodes["guider"]["inputs"]["model"] = ["sigma_shift", 0]
+    return nodes
+
+
+def build_h3_i2v_workflow(
+    image_name, positive, width=768, height=1344, length=124,
+    seed=None, filename_prefix="manju_h3", unet_gguf=None, models=None,
+    turbo=False,
+):
+    """H3 单人 i2v (ImageToVideo + 首帧关键帧). 基于已验证的 _h3_t2v_gguf.json.
+
+    turbo=True → 加 MiniMax-H3-Turbo LoRA (steps 20→8) + SigmaShift, 加速 ~2.5x.
+    """
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    m = dict(H3_MODELS, **(models or {}))
+    wf = _h3_base_nodes(positive, width, height, length, seed, filename_prefix,
+                        unet_gguf or m["fl2va_gguf"], models, turbo=turbo)
+    # ImageToVideo: first_frame ← LoadImage (首帧关键帧)
+    wf["frame"] = {"class_type": "LoadImage", "inputs": {"image": image_name}}
+    wf["cond"] = {"class_type": "MiniMaxH3ImageToVideo", "inputs": {
+        "clip": ["clip", 0], "vae": ["vae_v", 0],
+        "first_frame": ["frame", 0], "last_frame": None,
+        "prompt": positive, "width": width, "height": height, "length": length}}
+    # 采样 latent 从 cond[1] (LATENT 输出)
+    wf["sampler"]["inputs"]["latent_image"] = ["cond", 1]
+    return wf
+
+
+def build_h3_ref2va_workflow(
+    ref_images, positive, width=768, height=1344, length=124,
+    seed=None, filename_prefix="manju_h3_dual", unet_gguf=None, models=None,
+    ref_image_size="match", turbo=False, audio=None, audio_slot="ref_audios",
+):
+    """H3 双人 Ref2VA (多参考图). 基于已验证的 h3_ref2va_local_gguf_fix.json.
+
+    ref_images: list[str] — 参考图文件 (ComfyUI input 名), 每个角色一张.
+    positive: "<Picture 1> 角色A 与 <Picture 2> 角色B, ..." 格式.
+    turbo=True → 加 MiniMax-H3-Turbo LoRA (steps 20→8) + SigmaShift.
+    audio: 台词音频文件 (ComfyUI input 名) → LoadAudio → ref_audios.ref_audio_0.
+        H3 用音频音素驱动角色口型 (对话镜). 默认 None (无音频, 环境音).
+    audio_slot: "ref_audios" (角色台词驱动口型) | "ref_video_audios" (参考视频音频).
+    """
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    m = dict(H3_MODELS, **(models or {}))
+    wf = _h3_base_nodes(positive, width, height, length, seed, filename_prefix,
+                        unet_gguf or m["ref2va_gguf"], models, turbo=turbo)
+    # N 个 LoadImage + ref_images.ref_image_N 点号 key
+    cond_inputs = {
+        "clip": ["clip", 0], "vae": ["vae_v", 0], "audio_vae": ["vae_a", 0],
+        "prompt": positive, "width": width, "height": height, "length": length,
+        "ref_image_size": ref_image_size,
+    }
+    for i, img in enumerate(ref_images):
+        node_id = f"ref{i}"
+        wf[node_id] = {"class_type": "LoadImage", "inputs": {"image": img}}
+        cond_inputs[f"ref_images.ref_image_{i}"] = [node_id, 0]
+    # 台词音频 → LoadAudio → ref_audios/ref_video_audios (驱动口型)
+    if audio:
+        wf["audio_line"] = {"class_type": "LoadAudio", "inputs": {"audio": audio}}
+        cond_inputs[f"{audio_slot}.ref_audio_0"] = ["audio_line", 0]
+    wf["cond"] = {"class_type": "MiniMaxH3ReferenceToVideo", "inputs": cond_inputs}
+    wf["sampler"]["inputs"]["latent_image"] = ["cond", 1]
+    return wf

@@ -149,6 +149,9 @@ neg: {neg}
        "dialog"    角色面向镜头说台词, 唇型由台词音频驱动 (默认, 有 line 的镜都是);
        "voiceover" 画外音解说, 角色闭嘴不开口, 后期叠旁白 (旁白镜, 仅此值需显式标注);
        "ambient"   无台词纯环境音 (舞蹈/健身等动作镜, 此时 line 留空字符串)。
+   - frame_chars (可选, 该镜画面中的角色KEY数组, 缺省= [speaker]):
+      单人特写镜 = [speaker] (只有说话人); 双人同框互动镜 = [两个角色KEY]。
+      默认单人; 只有明确"两人同框/双人对话/一起动作"的镜才写双人。
    创作提示: 想让角色"开口说台词"→ dialog; 想让镜头有"解说感"但角色不说话 → voiceover。
 
 【角色设定(用户给定, 必须遵守)】
@@ -294,12 +297,20 @@ def merge_script(
         if spk not in characters:
             spk = first_char
         lt = str(s.get("line_type") or "").strip().lower()
+        # frame_chars: LLM 显式给出 (单人=[speaker] / 双人=[两角色]) → 透传; 缺省 None (storyboard 推断)
+        fc = s.get("frame_chars")
+        if isinstance(fc, (list, tuple)) and fc:
+            fc = [_canonical_key(c) for c in fc]
+            fc = [c for c in fc if c in characters] or None
+        else:
+            fc = None
         shots[str(sid)] = {
             "shot": str(s.get("shot") or ""),
             "line": str(s.get("line") or ""),
             "motion": str(s.get("motion") or ""),
             "speaker": spk,
             "line_type": lt or None,
+            "frame_chars": fc,
         }
 
     if expected_n_shots is not None and len(shots) != expected_n_shots:

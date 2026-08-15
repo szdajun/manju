@@ -375,7 +375,11 @@ def build_txt2img_workflow(
     scheduler="karras",
     filename_prefix="manju_lihui",
 ):
-    """SD1.5 纯文本生图(写实立绘用; 立绘是脸源, 不需 IPAdapter 锁脸)。"""
+    """纯文本生图 (CheckpointLoaderSimple + CLIPTextEncode + KSampler).
+
+    默认 SD1.5 DreamShaper (漫画/立绘); P2 角色定妆用 SDXL:
+      ckpt="sd_xl_base_1.0.safetensors", width=768, height=1024 (SDXL 单 checkpoint 兼容).
+    """
     if seed is None:
         seed = int.from_bytes(os.urandom(4), "big") % (2**32)
     return {

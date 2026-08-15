@@ -170,6 +170,8 @@ def main():
     # 2026-08-15 P0: 尾帧衔接 — 单人无对白镜用上镜尾帧当首帧, 跨镜不跳变 (LocalMiniDrama 参考)
     ap.add_argument("--tail-link", action="store_true",
                     help="尾帧衔接: 单人无对白镜 (H3 ImageToVideo) 用上一镜输出尾帧作首帧")
+    # 2026-08-15: H3 音频偶发乱码/重复 (seed 相关) → 换 seed 重跑修复
+    ap.add_argument("--seed", type=int, default=None, help="H3 采样 seed (默认 42, 换值避重复/乱码)")
     args = ap.parse_args()
 
     script = load_script(args.ep)
@@ -225,6 +227,8 @@ def main():
                 # H3 单人 i2v: 首帧关键帧 + 竖屏 768x1344 (正式档) / 432x768 (迭代档)
                 kw.update({"width": args.h3_width, "height": args.h3_height,
                            "mode": "single", "turbo": args.h3_turbo})
+                if args.seed is not None:
+                    kw["seed"] = args.seed
                 fc = frame_chars(script, s)
                 fc = [c for c in (fc or []) if c in script["characters"]
                       and (script["characters"][c].get("face_ref")

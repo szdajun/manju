@@ -86,6 +86,8 @@ def main():
                     help=f"跨镜漂移阈值 (默认 {DEFAULT_THRESHOLD}; H3 健康 ~0.54-0.75)")
     ap.add_argument("--frame", type=int, default=None, help="抽帧索引 (默认中段)")
     ap.add_argument("--no-ref", action="store_true", help="不对比角色 ref")
+    ap.add_argument("--report", default=None,
+                    help="输出 JSON 报告路径 (质量门 orchestrator 用; 含漂移镜列表)")
     args = ap.parse_args()
 
     script = load_script(args.ep)
@@ -120,7 +122,21 @@ def main():
         print("[ERR] 有效镜 < 2, 无法跨镜校验")
         return 2
 
-    consis = cross_shot_consistency(embs)
+    # ⭐ 2026-08-15 P0-2: 多角色剧跨镜按角色分组 (每镜只和同角色镜比, 防不同角色拉低).
+    from lib.storyboard import speaker
+    groups = {}
+    for s in shots:
+        if s in embs:
+            groups.setdefault(speaker(script, s), []).append(s)
+    consis = {}
+    for spk, s_list in groups.items():
+        if len(s_list) < 2:
+            for s in s_list:
+                consis[s] = 1.0   # 该角色只有一镜 → 无对比, 不 flag
+        else:
+            for s in s_list:
+                others = [np.dot(embs[s], embs[s2]) for s2 in s_list if s2 != s]
+                consis[s] = float(np.mean(others))
     print(f"\n=== ep{ep} i2v 人脸一致性 ({len(embs)} 镜, 跨镜阈值 {args.threshold}) ===")
     drift = []
     for s in shots:
@@ -136,6 +152,18 @@ def main():
             drift.append(s)
     avg = np.mean([consis[s] for s in embs])
     print(f"\n  平均跨镜={avg:.3f}  漂移镜: {drift or '无'}")
+    if args.report:
+        import json
+        report = {
+            "ep": ep, "threshold": args.threshold,
+            "n_shots": len(embs), "avg_cross_shot": round(float(avg), 4),
+            "per_shot": {str(s): round(float(consis[s]), 4) for s in embs},
+            "drift": drift,
+        }
+        os.makedirs(os.path.dirname(os.path.abspath(args.report)), exist_ok=True)
+        with open(args.report, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        print(f"[report] {args.report}")
     return 1 if drift else 0
 
 

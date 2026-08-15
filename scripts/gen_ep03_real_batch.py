@@ -27,8 +27,9 @@ from lib.comfyui_client import (  # noqa: E402
 from lib.storyboard import (  # noqa: E402
     character, load_script, shot, speaker)
 
-DEFAULT_CKPT = "DreamShaper_8_pruned.safetensors"
-KW, KH = 480, 832  # Wan i2v 原生桶, 沿用 ep02
+# 2026-08-15 P0: 默认 SDXL (face_sim 0.12→目标0.35+, IPAdapterUnifiedLoader 自动选 sdxl face adapter)
+DEFAULT_CKPT = "sd_xl_base_1.0.safetensors"
+KW, KH = 768, 1344  # SDXL 原生 2:3, 喂 H3 i2v (DreamShaper 时代 480×832)
 
 FIT_PY = "../fitness-video-pipeline/.venv/Scripts/python.exe"
 
@@ -71,6 +72,10 @@ def main():
                     help="全身 IPAdapter weight (调研推荐值, pilot 已验 3/3 长袖对)")
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--ckpt", default=DEFAULT_CKPT)
+    # P0-1: SDXL 关键帧尺寸/步数/cfg (768×1344 SDXL 原生)
+    ap.add_argument("--width", type=int, default=KW, help="关键帧宽 (SDXL 默认 768)")
+    ap.add_argument("--height", type=int, default=KH, help="关键帧高 (SDXL 默认 1344)")
+    ap.add_argument("--cfg", type=float, default=7.0, help="KSampler cfg (SDXL 默认 7.0)")
     ap.add_argument("--face-only", action="store_true",
                     help="强制全部走单锁 (debug: 对比 baseline, 跳过 body ref)")
     # orchestrator 接入: 角色立绘可从剧本数据透传 (剧本 characters 优先)
@@ -104,7 +109,7 @@ def main():
     if body_name:
         print(f"[upload] ref body -> {body_name}")
     print(f"[cfg] {args.ckpt}  face w={args.weight_face}  body w={args.weight_body if body_name else 'N/A'}  "
-          f"face-only={args.face_only}  关键帧 {KW}x{KH}  镜数 {shots}\n")
+          f"face-only={args.face_only}  关键帧 {args.width}x{args.height}  cfg={args.cfg}  镜数 {shots}\n")
 
     results = []
     prefix = f"ep{ep}_shot"
@@ -130,7 +135,7 @@ def main():
                 ref_body_name=body_name,
                 positive=pos, negative=script["neg"],
                 ckpt=args.ckpt, seed=args.seed,
-                width=KW, height=KH,
+                width=args.width, height=args.height, cfg=args.cfg,
                 weight_face=args.weight_face, weight_body=args.weight_body,
                 filename_prefix=f"{prefix}{s:02d}",
             )
@@ -140,7 +145,7 @@ def main():
                 ref_image_name=face_name,
                 positive=pos, negative=script["neg"],
                 ckpt=args.ckpt, seed=args.seed,
-                width=KW, height=KH,
+                width=args.width, height=args.height, cfg=args.cfg,
                 ipadapter_weight=args.weight_face,
                 filename_prefix=f"{prefix}{s:02d}",
             )

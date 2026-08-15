@@ -29,10 +29,10 @@ def test_scripts_for_known_and_unknown():
 
 
 def test_build_plan_all_stages(ep03):
-    """默认 → 4 阶段, 顺序 kf,i2v,voice,assemble."""
+    """默认 → 5 阶段, 顺序 kf,i2v,verify,voice,assemble."""
     plan = build_plan(ep03, ep="03")
     assert [p.stage for p in plan] == list(STAGES)
-    assert len(plan) == 4
+    assert len(plan) == 5
 
 
 def test_plan_scripts_match_ep03():
@@ -41,8 +41,19 @@ def test_plan_scripts_match_ep03():
     names = {p.stage: p.script for p in plan}
     assert names["kf"] == "gen_ep03_real_batch.py"
     assert names["i2v"] == "gen_ep03_seedance.py"
+    assert names["verify"] == "check_i2v_face.py"
     assert names["voice"] == "voice_ep03.py"
     assert names["assemble"] == "make_ep03_real.py"
+
+
+def test_verify_stage_uses_fitness_python(ep03, tmp_path):
+    """verify 阶段用 fitness venv python + --report, 落 i2v 目录."""
+    plan = build_plan(ep03, ep="03")
+    v = next(p for p in plan if p.stage == "verify")
+    assert "fitness-video-pipeline" in v.argv[0]      # fitness venv (insightface)
+    assert "check_i2v_face.py" in v.argv[1]
+    assert "--report" in v.argv                       # 出 JSON 报告
+    assert v.output.endswith("_verify_report.json")
 
 
 def test_incremental_skip(tmp_path, ep03):

@@ -34,6 +34,7 @@ scripts/_*.py
 scripts/face_swap_batch.py
 scripts/face_swap_dual.py
 scripts/face_warp_eyelid.py
+scripts/facelock_h3_ep.py   # 2026-08-15 H3 换脸实验 (已取消: 音频丢/嘴唇深/换错脸, 留磁盘备查)
 
 # 本地 ComfyUI 连接配置(WSL 8189 端口, 非凭据但本机特定)
 _wsl8189.json

@@ -24,7 +24,9 @@ MANJU = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(MANJU, "scripts")
 
 # 阶段顺序 (固定, 不可调换)
-STAGES = ("kf", "i2v", "voice", "assemble")
+# 2026-08-15 P0: verify = 质量门 (i2v 后跑 check_i2v_face 跨镜人脸一致性, fitness venv)
+STAGES = ("kf", "i2v", "verify", "voice", "assemble")
+FIT_PY = "../fitness-video-pipeline/.venv/Scripts/python.exe"  # insightface 在 fitness venv
 STAGE_ALIASES = {
     "kf": "kf", "keyframes": "kf",
     "i2v": "i2v", "video": "i2v",
@@ -37,18 +39,21 @@ EP_SCRIPTS = {
     "03": {
         "kf": "gen_ep03_real_batch.py",
         "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",   # P0-2 质量门 (fitness venv 跑)
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
     "04": {   # Phase 3: 通用化脚本复用, --ep 切剧本
         "kf": "gen_ep03_real_batch.py",
         "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
     "20": {   # 2026-08-15 P1/P2: 小说→剧本→定妆图 (LINXIA+李教练), 全链路验证
         "kf": "gen_ep03_real_batch.py",
         "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
@@ -69,6 +74,7 @@ def default_out_dirs(ep: str) -> dict[str, str]:
     return {
         "kf": os.path.join(MANJU, "output", f"ep{ep}_real"),
         "i2v": os.path.join(MANJU, "output", f"ep{ep}_i2v_real", "_seedance"),
+        "verify": os.path.join(MANJU, "output", f"ep{ep}_i2v_real", "_seedance"),  # 报告落 i2v 目录
         "voice": os.path.join(MANJU, "output", f"ep{ep}_voice"),
         "assemble": os.path.join(MANJU, "output", f"ep{ep}_assemble"),
     }
@@ -100,6 +106,13 @@ def i2v_done(ep: str, shot: int, out_dir: str) -> bool:
 def voice_done(shot: int, out_dir: str) -> bool:
     """配音: voice_shot{s:02d}.mp3 存在 → done."""
     return os.path.exists(os.path.join(out_dir, f"voice_shot{shot:02d}.mp3"))
+
+
+def verify_done(ep: str, i2v_dir: str, report_path: str) -> bool:
+    """质量门: i2v 输出 ≥1 且报告已生成 → done."""
+    if not _products_exist([os.path.join(i2v_dir, f"ep{ep}_shot*.mp4")]):
+        return False
+    return os.path.exists(report_path)
 
 
 # ---- plan ----
@@ -152,8 +165,8 @@ def build_plan(script: dict, *, ep: str,
     dirs = default_out_dirs(ep_norm)
     if out_root:
         dirs = {k: os.path.join(out_root, v) for k, v in {
-            "kf": "kf", "i2v": "i2v", "voice": "voice",
-            "assemble": "assemble", }.items()}
+            "kf": "kf", "i2v": "i2v", "verify": "i2v",
+            "voice": "voice", "assemble": "assemble", }.items()}
 
     shot_ids = _parse_shots(shots, script)
     want = _resolve_stages(only, skip)
@@ -197,6 +210,18 @@ def build_plan(script: dict, *, ep: str,
                     "--ep", ep_norm, "--shots", shots_arg,
                     "--kf-dir", dirs["kf"], "--out", out,
                     "--duration", str(duration_s)]
+        elif stage == "verify":
+            # P0-2 质量门: i2v 后跑 check_i2v_face (fitness venv), 出报告到 i2v 目录.
+            # 非阻塞: 报告漂移但不中断 (组装仍继续); --strict 时 exit 非 0 由 run_plan 判.
+            report = os.path.join(dirs["i2v"], "_verify_report.json")
+            if force or not verify_done(ep_norm, dirs["i2v"], report):
+                todo = shot_ids
+            else:
+                skipped = shot_ids
+            argv = [FIT_PY, os.path.join(SCRIPTS, script_name),
+                    "--ep", ep_norm, "--i2v-dir", dirs["i2v"],
+                    "--report", report]
+            out = report
         elif stage == "voice":
             for s in shot_ids:
                 if force or not voice_done(s, out):

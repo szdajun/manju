@@ -32,6 +32,9 @@ def main():
     ap.add_argument("--style", choices=["real", "cartoon"], default="real")
     ap.add_argument("--no-char-lock", action="store_true",
                     help="关闭系列角色锁定 (每集独立提取角色; 默认锁定跨集一致)")
+    ap.add_argument("--char-assets", default=None,
+                    help="继承上集资产: 指向已生成定妆图的 script.json (如 output/ep20/script.json), "
+                         "同名角色复用其 face_ref/body_ref, 免重复生成定妆")
     ap.add_argument("--dry-run", action="store_true",
                     help="只打印分组/系列角色/每集 prompt, 不调 API 不写文件")
     ap.add_argument("--out-root", default=None, help="输出根目录 (默认 output)")
@@ -63,6 +66,16 @@ def main():
     else:
         series_chars = {}
 
+    # 继承上集资产 (face_ref/body_ref): 同名系列角色复用, 免重复生成定妆图
+    asset_overrides = {}
+    if args.char_assets:
+        import json as _json
+        src = _json.load(open(args.char_assets, encoding="utf-8"))
+        for k, ch in src.get("characters", {}).items():
+            if ch.get("face_ref"):
+                asset_overrides[k] = {"face_ref": ch["face_ref"], "body_ref": ch.get("body_ref")}
+        print(f"[char-assets] 继承 {len(asset_overrides)} 个角色资产", flush=True)
+
     # 3. 每集生成
     ep_start = int(args.ep_start)
     out_root = args.out_root or os.path.join(MANJU, "output")
@@ -77,6 +90,10 @@ def main():
         else:
             # 后续集: 用首集展开的 fingerprint 锁定 (防 LLM 每集展开 brief 变体)
             chars = locked_chars or series_chars
+        # 继承资产 (face_ref/body_ref): 同名角色复用上集定妆图
+        for k in list(chars):
+            if k in asset_overrides:
+                chars[k].update(asset_overrides[k])
         title = ep["title"] if ep["title"] != "全文" else entities["subject"][:12]
         print(f"\n[ep{ep_num}] subject: {entities['subject']}", flush=True)
         print(f"  chars: {list(chars)}", flush=True)

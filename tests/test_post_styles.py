@@ -78,16 +78,23 @@ def test_transitions_table_covers_rules():
 def test_pick_transitions_rules():
     d_vo_d = _mini_script(["dialog", "voiceover", "dialog", "ambient"])
     got = pick_transitions(d_vo_d)
-    assert got == ["circleopen", "slideup", "blackfade"]
+    assert got == ["circleopen", "slideup", "fadeblack"]
 
 
 def test_pick_transitions_dialog_chain_and_fallback():
-    # dialog→dialog 快切; 未知组合兜底 fade; 末镜前 blackfade
+    # dialog→dialog 快切; 未知组合兜底 fade; 末镜前 fadeblack
     got = pick_transitions(_mini_script(["dialog", "dialog", "ambient"]))
-    assert got == ["wipeleft", "blackfade"]
+    assert got == ["wipeleft", "fadeblack"]
     got2 = pick_transitions(_mini_script(["ambient", "ambient", "ambient"]))
-    assert got2 == ["fade", "blackfade"]
+    assert got2 == ["fade", "fadeblack"]
 
 
 def test_pick_transitions_single_shot():
     assert pick_transitions(_mini_script(["dialog"])) == []
+
+
+def test_transitions_all_valid_ffmpeg():
+    """白名单全部是 ffmpeg xfade 合法名 (blackfade 是未实现的错误名, 教训 2026-08-17)."""
+    valid = {"fade", "wipeleft", "wiperight", "slideup", "slidedown",
+             "circleopen", "circleclose", "fadeblack", "fadewhite", "dissolve"}
+    assert set(TRANSITIONS) <= valid

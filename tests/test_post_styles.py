@@ -10,7 +10,7 @@ sys.path.insert(0, MANJU)
 sys.path.insert(0, os.path.join(MANJU, "scripts"))
 
 from lib.post_styles import (  # noqa: E402
-    SUBTITLE_STYLES, resolve_style)
+    SUBTITLE_STYLES, resolve_style, TRANSITIONS, pick_transitions)
 
 
 def test_subtitle_styles_schema():
@@ -60,3 +60,34 @@ def test_render_subtitle_unknown_style(tmp_path):
     import make_ep01 as m
     with pytest.raises(ValueError, match="classic"):
         m.render_subtitle("x", str(tmp_path / "s.png"), style="neon")
+
+
+def _mini_script(pairs):
+    """pairs = [(line_type),...] → 最小剧本 dict (pick_transitions 只看 line_type)."""
+    return {"shots": {str(i + 1): {"line_type": lt, "line": "x"}
+                      for i, lt in enumerate(pairs)}}
+
+
+def test_transitions_table_covers_rules():
+    """规则表引用的转场名都在 ffmpeg xfade 白名单表里."""
+    from lib.post_styles import TRANSITION_RULES
+    for tr in TRANSITION_RULES.values():
+        assert tr in TRANSITIONS
+
+
+def test_pick_transitions_rules():
+    d_vo_d = _mini_script(["dialog", "voiceover", "dialog", "ambient"])
+    got = pick_transitions(d_vo_d)
+    assert got == ["circleopen", "slideup", "blackfade"]
+
+
+def test_pick_transitions_dialog_chain_and_fallback():
+    # dialog→dialog 快切; 未知组合兜底 fade; 末镜前 blackfade
+    got = pick_transitions(_mini_script(["dialog", "dialog", "ambient"]))
+    assert got == ["wipeleft", "blackfade"]
+    got2 = pick_transitions(_mini_script(["ambient", "ambient", "ambient"]))
+    assert got2 == ["fade", "blackfade"]
+
+
+def test_pick_transitions_single_shot():
+    assert pick_transitions(_mini_script(["dialog"])) == []

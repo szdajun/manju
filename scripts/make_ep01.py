@@ -331,11 +331,11 @@ def mux_seg_audio(seg_video, voice_mp3, dst, keep_orig_audio=False):
 
 
 def concat_xfade_av(segs, durs, dst, xfade=XFADE, fps=FPS, ts=TIMESCALE,
-                    transition="fade"):
+                    transition="fade", transitions=None):
     """链式 xfade(视频) + acrossfade(音频) 对齐。offset_i = sum(durs[:i]) - i*xfade。
 
-    每段音画同长 → 视频重叠 xfade 秒处音频也 acrossfade xfade 秒, 两链同步。
-    transition: xfade 视频转场类型(fade 交叉溶解 / fadeblack 黑场章节 / dissolve…)。
+    transitions: 逐衔接转场名列表 (len = len(segs)-1, i 项 = seg_i → seg_{i+1});
+                 None → 全部用 transition (现行为)。
     """
     n = len(segs)
     inputs = []
@@ -343,10 +343,11 @@ def concat_xfade_av(segs, durs, dst, xfade=XFADE, fps=FPS, ts=TIMESCALE,
         inputs += ["-i", s]
     pv, pa, prev_v, prev_a = [], [], "0:v", "0:a"
     for i in range(1, n):
+        tr = transitions[i - 1] if transitions else transition
         offset = round(sum(durs[:i]) - i * xfade, 3)
         lv = "vout" if i == n - 1 else f"x{i}"
         la = "aout" if i == n - 1 else f"af{i}"
-        pv.append(f"[{prev_v}][{i}:v]xfade=transition={transition}:"
+        pv.append(f"[{prev_v}][{i}:v]xfade=transition={tr}:"
                   f"duration={xfade}:offset={offset}[{lv}]")
         pa.append(f"[{prev_a}][{i}:a]acrossfade=duration={xfade}"
                   f":curve1=tri:curve2=tri[{la}]")

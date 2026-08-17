@@ -36,3 +36,39 @@ def resolve_style(key: str) -> dict:
         raise ValueError(
             f"未知字幕风格 {key!r}, 可选: {sorted(SUBTITLE_STYLES)}")
     return SUBTITLE_STYLES[key]
+
+
+# ---- 转场 (ffmpeg xfade 内置类型白名单 + 节奏规则) ----
+TRANSITIONS: dict[str, str] = {
+    "fade": "交叉溶解 (通用)",
+    "wipeleft": "左擦快切 (叙事推进)",
+    "slideup": "上滑 (回现实)",
+    "circleopen": "圆形展开 (进内心)",
+    "blackfade": "黑场 (收尾/章节)",
+}
+
+# (上镜 line_type, 下镜 line_type) → 转场; 未命中兜底 fade
+TRANSITION_RULES: dict[tuple[str, str], str] = {
+    ("dialog", "dialog"): "wipeleft",
+    ("dialog", "voiceover"): "circleopen",
+    ("voiceover", "dialog"): "slideup",
+}
+
+
+def pick_transitions(script: dict) -> list[str]:
+    """按镜头 line_type 查节奏规则 → 每衔接一个转场 (len = 镜数-1).
+
+    末镜前固定 blackfade (收尾感), 其余未命中规则兜底 fade。
+    """
+    ids = sorted(script["shots"].keys(), key=int)
+    lts = []
+    for sid in ids:
+        lt = (script["shots"][sid] or {}).get("line_type") or "dialog"
+        lts.append(lt)
+    out = []
+    for i in range(len(lts) - 1):
+        if i == len(lts) - 2:                    # 末镜前
+            out.append("blackfade")
+        else:
+            out.append(TRANSITION_RULES.get((lts[i], lts[i + 1]), "fade"))
+    return out

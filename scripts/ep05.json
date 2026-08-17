@@ -1,0 +1,51 @@
+{
+  "ep": "05",
+  "title": "健身三分钟（三模式演示）",
+  "duration_s": 5,
+  "style": "photorealistic, real photograph, 50mm lens, cinematic lighting, shallow depth of field, detailed skin texture, natural colors, sharp focus, vertical composition, 8k uhd",
+  "neg": "text, watermark, logo, signature, extra fingers, deformed hands, mutated hands, bad anatomy, extra limbs, blurry, lowres, jpeg artifacts, anime, manga, cartoon, illustration, painting, 3d render, cg, lineart, flat shading, plastic skin, airbrushed, multiple views, reference sheet, face morphing, face distortion, warped face, melting face, asymmetrical eyes, deformed face, puffy under-eye, heavy eye bags, thick lower eyelid, prominent eye bags, dark circles, tired eyes, color shift, clothing color change, outfit change, white shirt, blue shirt, different clothes",
+  "eye_fix": "bright fresh energetic eyes, smooth under-eye area, no eye bags, natural well-formed eyelids",
+  "characters": {
+    "LINXIA": {
+      "fingerprint": "1girl, solo, Linxia (林夏), a slim-fit 26-30 year-old Chinese woman, black hair in a high ponytail, wearing a misty-blue long-sleeve athletic top with a small white arc logo on the left chest, black high-waist athletic pants with a thin gray side stripe down the leg, white running shoes, natural makeup, bright energetic eyes, friendly confident expression, modern athletic wear, gym setting",
+      "face_ref": "output/ep03_lihui/linxia_real_face.png",
+      "body_ref": "output/ep03_lihui/linxia_real.png",
+      "voice_id": "female-shaonv",
+      "lora": null
+    }
+  },
+  "shots": {
+    "1": {
+      "shot": "medium full shot, modern gym interior with dumbbell rack in the background, Linxia wearing misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants with gray side stripe, white running shoes, black hair in a high ponytail, stands in front of dumbbells with fists clenched, determined expression, bright overhead gym lighting, vertical composition, energetic fitness mood",
+      "line": "今天我必把这堆哑铃都练个遍，自律到底！",
+      "motion": "Linxia slightly raises her clenched fists, determined gaze fixed on the dumbbells, subtle arm lift motion, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA"
+    },
+    "2": {
+      "shot": "medium shot, modern gym with dumbbells in foreground, Linxia wearing misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants with gray side stripe, white running shoes, black hair in a high ponytail, reaches for a dumbbell then pauses, hand hovering over pocket, curious expression, bright gym lighting, vertical composition, playful mood",
+      "line": "嗯？口袋震了？就看一眼是谁发消息哈。",
+      "motion": "Linxia's hand moves from dumbbell to her pants pocket, fingers brushing the phone inside, subtle hand motion, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA"
+    },
+    "3": {
+      "shot": "medium close-up, modern gym background blurred, Linxia wearing misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants with gray side stripe, white running shoes, black hair in a high ponytail, holds phone in hand, eyes fixed on screen, interested expression, soft overhead lighting, vertical composition, focused mood",
+      "line": "手机里教练的壶铃动作行云流水，她看得入了神。",
+      "motion": "Linxia's thumb slides slowly on the phone screen, eyes widening slightly with interest, subtle thumb motion, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "line_type": "voiceover"
+    },
+    "4": {
+      "shot": "three-quarter body shot, modern gym with dumbbell rack beside her, Linxia wearing misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants with gray side stripe, white running shoes, black hair in a high ponytail, leans against the rack, phone held up to face, grinning, warm gym lighting, vertical composition, relaxed mood",
+      "line": "",
+      "motion": "Linxia does a few quick jumping jacks to warm up, subtle bouncing motion, arms swinging naturally, no speech, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "line_type": "ambient"
+    },
+    "5": {
+      "shot": "close-up, modern gym background out of focus, Linxia wearing misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants with gray side stripe, white running shoes, black hair in a high ponytail, eyes dart from phone to the unused dumbbells, embarrassed smile, soft lighting, vertical composition, humorous mood",
+      "line": "哎呀！说好的自律呢？明天…明天一定练！",
+      "motion": "Linxia's eyes shift quickly between phone and dumbbells, then she scratches the back of her head with a sheepish grin, subtle eye movement and head scratch, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "ep": "07",
+  "title": "健身vlog三分钟（性感版）",
+  "duration_s": 180,
+  "style": "photorealistic, real photograph, 50mm lens, cinematic lighting, shallow depth of field, detailed skin texture, natural colors, sharp focus, vertical composition, 8k uhd",
+  "neg": "text, watermark, logo, signature, extra fingers, deformed hands, mutated hands, bad anatomy, extra limbs, blurry, lowres, jpeg artifacts, anime, manga, cartoon, illustration, painting, 3d render, cg, lineart, flat shading, plastic skin, airbrushed, multiple views, reference sheet, face morphing, face distortion, warped face, melting face, asymmetrical eyes, deformed face, puffy under-eye, heavy eye bags, thick lower eyelid, prominent eye bags, dark circles, tired eyes, color shift, clothing color change, outfit change, white shirt, blue shirt, different clothes",
+  "eye_fix": "bright fresh energetic eyes, smooth under-eye area, no eye bags, natural well-formed eyelids",
+  "characters": {
+    "LINXIA": {
+      "fingerprint": "1girl, solo, Linxia (林夏), a slim-fit 26-30 year-old Chinese woman, black hair in a high ponytail, wearing a bright hot pink cropped sports top that reveals her toned flat midriff and waist, high-waist black tight athletic shorts hugging her hips and legs, white running shoes, natural makeup, bright energetic eyes, confident sexy smile, modern athletic wear, gym setting",
+      "face_ref": "output/ep03_lihui/linxia_real_face.png",
+      "body_ref": "output/ep03_lihui/linxia_sexy.png",
+      "voice_id": "female-shaonv",
+      "lora": null
+    }
+  },
+  "shots": {
+    "1": {
+      "shot": "medium shot, modern gym interior with dumbbell rack in the background, Linxia (林夏) wearing a hot pink cropped sports top revealing her toned flat midriff, black high-waist tight athletic shorts, white running shoes, black hair in a high ponytail, stands facing the camera with a bright smile, bright overhead gym lighting, vertical composition, energetic fitness atmosphere",
+      "line": "哈喽姐妹们！今天三分钟高效健身安排上啦！",
+      "motion": "Linxia waves her right hand slightly, nods gently at the camera, subtle head movement, the hot pink crop top stays hot pink throughout, the high-waist black shorts stay black throughout, the toned midriff stays visible throughout",
+      "speaker": "LINXIA",
+      "line_type": "dialog"
+    },
+    "2": {
+      "shot": "medium shot, modern gym interior with yoga mat in the background, Linxia (林夏) wearing a hot pink cropped sports top revealing her toned flat midriff, black high-waist tight athletic shorts, white running shoes, black hair in a high ponytail, performs slow arm circles with a focused expression, bright overhead gym lighting, vertical composition, calm warm-up atmosphere",
+      "line": "首先做热身动作，手臂环绕激活肩颈，每组20秒哦",
+      "motion": "Linxia does forward arm circles then switches to backward, subtle arm movement, the hot pink crop top stays hot pink throughout, the high-waist black shorts stay black throughout, the toned midriff stays visible throughout",
+      "speaker": "LINXIA",
+      "line_type": "voiceover"
+    },
+    "3": {
+      "shot": "three-quarter body shot, modern gym interior with mirror wall in the background, Linxia (林夏) wearing a hot pink cropped sports top revealing her toned flat midriff, black high-waist tight athletic shorts, white running shoes, black hair in a high ponytail, does rhythmic dance-like warm-up moves, bright overhead gym lighting, vertical composition, dynamic fitness atmosphere",
+      "line": "",
+      "motion": "Linxia does small jumping jacks with arm swings, keeps movement light and rhythmic, subtle body movement, the hot pink crop top stays hot pink throughout, the high-waist black shorts stay black throughout, the toned midriff stays visible throughout",
+      "speaker": "LINXIA",
+      "line_type": "ambient"
+    },
+    "4": {
+      "shot": "medium shot, modern gym interior with resistance bands in the background, Linxia (林夏) wearing a hot pink cropped sports top revealing her toned flat midriff, black high-waist tight athletic shorts, white running shoes, black hair in a high ponytail, does bodyweight squats with proper form, bright overhead gym lighting, vertical composition, focused workout atmosphere",
+      "line": "接下来是深蹲，膝盖别超脚尖，感受臀部发力更有效",
+      "motion": "Linxia lowers into slow squats, knees tracking over toes, subtle squat movement, the hot pink crop top stays hot pink throughout, the high-waist black shorts stay black throughout, the toned midriff stays visible throughout",
+      "speaker": "LINXIA",
+      "line_type": "voiceover"
+    },
+    "5": {
+      "shot": "medium close-up, modern gym interior with water bottle beside her, Linxia (林夏) wearing a hot pink cropped sports top revealing her toned flat midriff, black high-waist tight athletic shorts, white running shoes, black hair in a high ponytail, wipes sweat and smiles warmly, bright overhead gym lighting, vertical composition, warm closing atmosphere",
+      "line": "今天就到这里啦，明天继续一起变美哦！",
+      "motion": "Linxia wipes sweat from her forehead with the back of her hand, nods at the camera, subtle head movement, the hot pink crop top stays hot pink throughout, the high-waist black shorts stay black throughout, the toned midriff stays visible throughout",
+      "speaker": "LINXIA",
+      "line_type": "dialog"
+    }
+  }
+}

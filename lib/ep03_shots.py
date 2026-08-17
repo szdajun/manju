@@ -145,3 +145,10 @@ SPEAKER = {
     4: "LINXIA",
     5: "LINXIA",
 }
+
+# ---- 角色资产 (2026-08-06 orchestrator 接入: 从生成器提进分镜数据, 让 run_ep 能按剧本驱动) ----
+TITLE = "装备先到位"
+DURATION_S = 5          # 单镜时长 (Seedance i2v 默认)
+FACE_REF = "output/ep03_lihui/linxia_real_face.png"   # 脸 ref (crop_face 产出)
+BODY_REF = "output/ep03_lihui/linxia_real.png"        # 全身 ref (锁衣服)
+VOICE_ID = "female-shaonv"                            # MiniMax 女声 (voice_ep03 用 MINIMAX_VOICE env, 默认一致)

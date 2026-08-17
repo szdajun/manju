@@ -338,6 +338,9 @@ def concat_xfade_av(segs, durs, dst, xfade=XFADE, fps=FPS, ts=TIMESCALE,
                  None → 全部用 transition (现行为)。
     """
     n = len(segs)
+    if transitions is not None:
+        assert len(transitions) == len(segs) - 1, \
+            f"transitions len {len(transitions)} != 镜数-1 {len(segs)-1}"
     inputs = []
     for s in segs:
         inputs += ["-i", s]

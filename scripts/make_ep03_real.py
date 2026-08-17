@@ -98,9 +98,10 @@ def main():
         if not src:
             print(f"[ERR] i2v 片段缺: {prefix}{s:02d}.mp4 in {i2v_dir}")
             return 1
-        seg_v = os.path.join(tmp, f"seg{s:02d}.mp4")
+        # 2026-08-18 fix: tmp 缓存名带 sub_style — 否则同目录切风格重跑静默沿用旧字幕
+        seg_v = os.path.join(tmp, f"seg{s:02d}_{post['sub_style']}.mp4")
         if not os.path.exists(seg_v):
-            sub_png = os.path.join(tmp, f"sub{s:02d}.png")
+            sub_png = os.path.join(tmp, f"sub{s:02d}_{post['sub_style']}.png")
             m.render_subtitle(shot(script, s)["line"], sub_png,
                               style=post["sub_style"])
             print(f"=== shot {s:2d} i2v -> seg ===", flush=True)
@@ -108,7 +109,7 @@ def main():
         else:
             print(f"=== shot {s:2d} seg cached ===")
         voice = os.path.join(voice_dir, f"voice_shot{s:02d}.mp3")
-        dst_av = os.path.join(tmp, f"av{s:02d}.mp4")
+        dst_av = os.path.join(tmp, f"av{s:02d}_{post['sub_style']}.mp4")
         tag = os.path.basename(voice) if os.path.exists(voice) else "(silent)"
         if not os.path.exists(dst_av):
             print(f"  mux shot {s:2d}  {tag}")
@@ -121,7 +122,9 @@ def main():
     print(f"[durs] {[round(d, 2) for d in durs]}  sum={sum(durs):.2f}")
     transitions = None
     if post["transition_mode"] == "auto":
-        transitions = pick_transitions(script)
+        # 2026-08-18 fix: 按选中镜构造子剧本 — 否则 --shots 非前缀子集时转场按全镜错位
+        sub_script = {"shots": {str(s): script["shots"][str(s)] for s in shots}}
+        transitions = pick_transitions(sub_script)
     m.concat_xfade_av(segs_av, durs, out, fps=m.V4_FPS, ts=m.V4_TS,
                       xfade=args.xfade, transition=args.transition,
                       transitions=transitions)
@@ -143,6 +146,9 @@ def main():
                 import shutil as _sh
                 _sh.copyfile(saved[-1], cache)
                 bgm_path = cache
+            else:
+                print("[bgm] WARN preset 生成无输出 (ComfyUI 起着? E:/music_models 权重在?)",
+                      flush=True)
     if bgm_path is None and args.bgm_gen:
         # 本地 Music3 生成 BGM (时长=成片总长+余量, 混音 atrim 会截)
         print(f"[bgm] 本地生成 BGM ({total + 5:.0f}s, 健身曲) ...", flush=True)
@@ -172,7 +178,7 @@ def main():
         try:
             render_cover(script, dirs_kf, cover_out, shot_id=post["cover_shot"])
             print(f"[cover] {cover_out}")
-        except FileNotFoundError as e:
+        except Exception as e:  # 2026-08-18 fix: 宽捕获, 封面失败不阻塞成片
             print(f"[cover] WARN 跳过: {e}")
     print(f"\n[saved] {out}  {total:.2f}s  ({len(segs_av)} 镜, xfade={args.xfade}, "
           f"{args.transition}, 写实 Seedance + MiniMax 女声"

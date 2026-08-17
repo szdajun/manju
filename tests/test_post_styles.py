@@ -93,6 +93,14 @@ def test_pick_transitions_single_shot():
     assert pick_transitions(_mini_script(["dialog"])) == []
 
 
+def test_pick_transitions_subset_script():
+    """子剧本 (只含选中镜) 转场按选中镜对查表, 不按全镜错位."""
+    sub = {"shots": {"3": {"line_type": "voiceover"},
+                     "4": {"line_type": "dialog"},
+                     "5": {"line_type": "ambient"}}}
+    assert pick_transitions(sub) == ["slideup", "fadeblack"]
+
+
 def test_transitions_all_valid_ffmpeg():
     """白名单全部是 ffmpeg xfade 合法名 (blackfade 是未实现的错误名, 教训 2026-08-17)."""
     valid = {"fade", "wipeleft", "wiperight", "slideup", "slidedown",

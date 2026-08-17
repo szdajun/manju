@@ -44,3 +44,15 @@ scripts/ep05/_objinfo.json
 scripts/ep05/_tmp_8188.json
 scripts/ep05/_wan_stack.json
 scripts/ep05/_probe_summary.json
+
+# ---- 2026-08-17 清理: 大体量二进制/本地工具不入 git ----
+# GFPGAN 权重 (186M, 下载物)
+gfpgan/
+# realesrgan/gfpgan 独立二进制 (427M, 下载物)
+tools/
+# yolo 权重
+*.pt
+# 诊断快照
+_zdiag/
+# 本地 claude 配置
+.claude/

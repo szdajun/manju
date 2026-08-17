@@ -163,3 +163,22 @@ def test_render_cover_missing_kf_raises(tmp_path):
     script = {"ep": "22", "title": "自律的开始"}
     with pytest.raises(FileNotFoundError):
         render_cover(script, str(tmp_path / "nope"), str(tmp_path / "c.png"))
+
+
+def test_render_cover_gradient_not_solid_black(tmp_path):
+    """渐变区不是实心黑 (RGBA 画布不混 alpha 的回归, 2026-08-17 教训)."""
+    from PIL import Image
+    kf_dir = tmp_path / "kf"
+    kf_dir.mkdir()
+    Image.new("RGB", (768, 1344), (255, 0, 0)).save(
+        str(kf_dir / "ep22_shot01_seed1.png"))
+    script = {"ep": "22", "title": "自律的开始"}
+    out = str(tmp_path / "c.png")
+    render_cover(script, str(kf_dir), out)
+    img = Image.open(out).convert("RGB")
+    # 渐变起点附近 (y≈1255): 纯红源混少量黑, 必须仍是显著红色而非黑
+    px = img.getpixel((540, 1255))
+    assert px[0] > 120 and px[2] < 80, px
+    # 渐变中段 y≈1600: 深红但非纯黑
+    px2 = img.getpixel((540, 1600))
+    assert px2 != (0, 0, 0) and px2[0] > 0, px2

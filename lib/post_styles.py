@@ -164,7 +164,7 @@ def render_cover(script: dict, kf_dir: str, out: str,
     kf = kf.resize((int(kf.width * scale) + 1, int(kf.height * scale) + 1))
     x0 = (kf.width - tw) // 2
     y0 = (kf.height - th) // 2
-    img = kf.crop((x0, y0, x0 + tw, y0 + th)).convert("RGBA")
+    img = kf.crop((x0, y0, x0 + tw, y0 + th)).convert("RGB")
 
     d = ImageDraw.Draw(img, "RGBA")
     # 底部 35% 线性渐变黑 (title 可读性)
@@ -174,7 +174,6 @@ def render_cover(script: dict, kf_dir: str, out: str,
         d.line([(0, th - gh + i), (tw, th - gh + i)], fill=(0, 0, 0, a))
 
     font_path = "C:/Windows/Fonts/msyhbd.ttc"  # = make_ep01.FONT
-    f_title = ImageFont.truetype(font_path, 96)
     f_tag = ImageFont.truetype(font_path, 32)
     f_ep = ImageFont.truetype(font_path, 44)
 
@@ -203,5 +202,5 @@ def render_cover(script: dict, kf_dir: str, out: str,
            fill=(255, 218, 70, 255), stroke_width=4,
            stroke_fill=(0, 0, 0, 255))
 
-    img.convert("RGB").save(out)
+    img.save(out)
     return out

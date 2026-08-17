@@ -168,10 +168,13 @@ def build_plan(script: dict, *, ep: str,
                out_root: str | None = None,
                force: bool = False,
                only: set[str] = (),
-               skip: set[str] = ()) -> list[StagePlan]:
+               skip: set[str] = (),
+               scene_ref: str | None = None,
+               weight_scene: float | None = None) -> list[StagePlan]:
     """纯函数: 输入分镜 dict + 选项 → 输出待执行计划. 不碰系统/文件变更.
 
     only/skip 空集默认全阶段. force=True → 跳过检测失效 (全部重跑).
+    scene_ref: 场景参考图 (kf 第 3 IPAdapter 锁背景); weight_scene 缺省走 kf 脚本默认 (0.35).
     返回按 STAGES 顺序的 StagePlan 列表.
     """
     ep_norm = str(ep).zfill(2) if str(ep).isdigit() else str(ep)
@@ -213,6 +216,10 @@ def build_plan(script: dict, *, ep: str,
                 argv += ["--ref-face", face_ref]
             if body_ref:
                 argv += ["--ref-body", body_ref]
+            if scene_ref:
+                argv += ["--scene-ref", scene_ref]
+                if weight_scene is not None:
+                    argv += ["--weight-scene", str(weight_scene)]
         elif stage == "i2v":
             for s in shot_ids:
                 if force or not i2v_done(ep_norm, s, out):

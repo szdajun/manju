@@ -83,8 +83,9 @@ def main():
     ap.add_argument("--ref-body", default=None, help="全身 ref 图路径 (默认剧本 characters[主角].body_ref)")
     # P1-2 场景锁: 场景参考图 (空景) → 第 3 个 IPAdapter 锁背景
     ap.add_argument("--scene-ref", default=None, help="场景参考图路径 (assets/scenes/*.png, 锁背景)")
-    ap.add_argument("--weight-scene", type=float, default=0.5,
-                    help="场景 IPAdapter weight (默认 0.5, 低防压角色)")
+    ap.add_argument("--weight-scene", type=float, default=0.35,
+                    help="场景 IPAdapter weight (默认 0.35; 2026-08-17 A/B/C 标定: "
+                         "0.5 背景一致但 face_sim 0.38→0.22, 0.35 背景仍收敛且身份保留 0.24+)")
     args = ap.parse_args()
 
     # 读剧本数据 (自动探测 output/epXX/script.json / scripts/epXX.json / lib.epXX_shots)

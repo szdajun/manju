@@ -45,6 +45,10 @@ def main():
                     help="只打印待执行命令, 不真正运行")
     ap.add_argument("--force", action="store_true",
                     help="忽略增量跳过, 全部重跑")
+    ap.add_argument("--scene-ref", default=None,
+                    help="场景参考图 (kf 第 3 IPAdapter 锁背景, 如 assets/scenes/健身房.png)")
+    ap.add_argument("--weight-scene", type=float, default=None,
+                    help="场景 IPAdapter weight (默认 0.35, 2026-08-17 标定)")
     ap.add_argument("--continue-on-error", action="store_true",
                     help="单阶段失败继续后续阶段 (默认 fail-fast)")
     ap.add_argument("--verbose", action="store_true",
@@ -68,6 +72,7 @@ def main():
         script, ep=args.ep,
         shots=args.shots, out_root=args.out_root,
         force=args.force, only=only, skip=skip,
+        scene_ref=args.scene_ref, weight_scene=args.weight_scene,
     )
 
     # 3. 执行

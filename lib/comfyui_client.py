@@ -182,7 +182,7 @@ def build_face_body_shot_workflow(
     weight_face=0.95,          # 脸 ref weight (沿用 ep02 验证值)
     weight_body=0.70,          # 全身 ref weight (调研推荐值, 待实测调)
     scene_ref_name=None,       # P1-2 场景参考图 (空景) → 锁背景
-    weight_scene=0.5,          # 场景 IPAdapter weight (低, 防压角色)
+    weight_scene=0.35,         # 场景 IPAdapter weight (2026-08-17 A/B/C 标定: 0.5 压身份, 0.35 平衡)
     weight_type="linear",
     embeds_scaling="V only",
     denoise=1.0,

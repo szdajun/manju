@@ -72,3 +72,63 @@ def pick_transitions(script: dict) -> list[str]:
         else:
             out.append(TRANSITION_RULES.get((lts[i], lts[i + 1]), "fade"))
     return out
+
+
+# ---- BGM 调性预设 (Music3 caption, 英文 prompt) ----
+# pump = music3.DEFAULT_BGM_CAPTION 原文迁入 (import 复用, 不复制粘贴)
+def _bgm_presets() -> dict[str, dict]:
+    from lib import music3
+    return {
+        "pump": {  # 燃/训练 (现默认)
+            "caption": music3.DEFAULT_BGM_CAPTION, "volume": 0.30,
+        },
+        "funny": {  # 滑稽轻快 (打工牛马喜剧向)
+            "caption": (
+                "Global Metadata: Playful comedic background for a funny "
+                "office-worker fitness short, 118 BPM, G major, bouncy "
+                "pizzicato strings, quirky woodwind stabs, slide whistle "
+                "accents, light shuffle rhythm, cheerful and clumsy "
+                "mood.\n\n"
+                "Audio Prompt: pizzicato strings, comedic woodwinds, light "
+                "percussion, shuffle groove, playful and bouncy, no vocals"),
+            "volume": 0.25,
+        },
+        "warm": {   # 温情
+            "caption": (
+                "Global Metadata: Warm emotional underscore for an "
+                "inspirational fitness journey short, 90 BPM, C major, soft "
+                "piano arpeggios, gentle strings pad, subtle acoustic "
+                "guitar, hopeful and heartwarming.\n\n"
+                "Audio Prompt: soft piano, warm strings, acoustic guitar, "
+                "slow build, emotional and hopeful, no vocals"),
+            "volume": 0.22,
+        },
+        "chill": {  # 丧系自嘲
+            "caption": (
+                "Global Metadata: Laid-back lo-fi track for a self-deprecating "
+                "office-worker comedy short, 82 BPM, A minor, mellow Rhodes "
+                "chords, dusty vinyl drums, lazy bassline, tired but cozy "
+                "vibe.\n\n"
+                "Audio Prompt: lo-fi rhodes, vinyl crackle, laid-back drums, "
+                "mellow bass, chill and slightly melancholic, no vocals"),
+            "volume": 0.22,
+        },
+    }
+
+
+BGM_PRESETS: dict[str, dict] = _bgm_presets()
+
+
+def resolve_bgm(key: str) -> dict:
+    """取 BGM 预设。未知 key → ValueError 带合法 key 列表."""
+    if key not in BGM_PRESETS:
+        raise ValueError(f"未知 BGM 预设 {key!r}, 可选: {sorted(BGM_PRESETS)}")
+    return BGM_PRESETS[key]
+
+
+def bgm_cache_path(preset: str, seed: int, root: str) -> str:
+    """BGM 产物缓存路径: root/{preset}_{md5(caption)[:8]}.flac. 同 caption+seed 免生成."""
+    import hashlib
+    import os
+    h = hashlib.md5(BGM_PRESETS[preset]["caption"].encode()).hexdigest()[:8]
+    return os.path.join(root, f"bgm_{preset}_{h}.flac")

@@ -98,3 +98,33 @@ def test_transitions_all_valid_ffmpeg():
     valid = {"fade", "wipeleft", "wiperight", "slideup", "slidedown",
              "circleopen", "circleclose", "fadeblack", "fadewhite", "dissolve"}
     assert set(TRANSITIONS) <= valid
+
+
+# ---- BGM 调性预设测试 ----
+
+from lib.post_styles import BGM_PRESETS, resolve_bgm, bgm_cache_path  # noqa: E402
+
+
+def test_bgm_presets_schema():
+    assert set(BGM_PRESETS) == {"pump", "funny", "warm", "chill"}
+    for key, p in BGM_PRESETS.items():
+        assert isinstance(p["caption"], str) and len(p["caption"]) > 50, key
+        assert 0.0 < p["volume"] <= 0.5, key
+
+
+def test_pump_caption_is_current_default():
+    """pump = 现 music3.DEFAULT_BGM_CAPTION 原文迁入 (零破坏)."""
+    from lib import music3
+    assert BGM_PRESETS["pump"]["caption"] == music3.DEFAULT_BGM_CAPTION
+
+
+def test_resolve_bgm_unknown():
+    with pytest.raises(ValueError, match="pump"):
+        resolve_bgm("epic")
+
+
+def test_bgm_cache_path_stable(tmp_path):
+    a = bgm_cache_path("funny", 42, str(tmp_path))
+    b = bgm_cache_path("funny", 42, str(tmp_path))
+    assert a == b and a.endswith(".flac") and "funny" in a
+    assert bgm_cache_path("warm", 42, str(tmp_path)) != a   # preset 进路径

@@ -128,3 +128,38 @@ def test_bgm_cache_path_stable(tmp_path):
     b = bgm_cache_path("funny", 42, str(tmp_path))
     assert a == b and a.endswith(".flac") and "funny" in a
     assert bgm_cache_path("warm", 42, str(tmp_path)) != a   # preset 进路径
+
+
+# ---- 封面渲染器测试 ----
+
+from lib.post_styles import render_cover  # noqa: E402
+
+
+def _make_kf(kf_dir, name, size=(768, 1344)):
+    from PIL import Image
+    Image.new("RGB", size, (200, 120, 90)).save(os.path.join(kf_dir, name))
+
+
+def test_render_cover_makes_1080x1920(tmp_path):
+    kf_dir = tmp_path / "kf"
+    kf_dir.mkdir()
+    _make_kf(str(kf_dir), "ep22_shot01_seed42.png")
+    script = {"ep": "22", "title": "自律的开始"}
+    out = render_cover(script, str(kf_dir), str(tmp_path / "cover.png"))
+    assert os.path.exists(out)
+    assert Image.open(out).size == (1080, 1920)
+
+
+def test_render_cover_uses_specified_shot(tmp_path):
+    kf_dir = tmp_path / "kf"
+    kf_dir.mkdir()
+    _make_kf(str(kf_dir), "ep22_shot03_seed7.png")
+    script = {"ep": "22", "title": "自律的开始"}
+    render_cover(script, str(kf_dir), str(tmp_path / "c.png"), shot_id=3)
+    assert (tmp_path / "c.png").exists()
+
+
+def test_render_cover_missing_kf_raises(tmp_path):
+    script = {"ep": "22", "title": "自律的开始"}
+    with pytest.raises(FileNotFoundError):
+        render_cover(script, str(tmp_path / "nope"), str(tmp_path / "c.png"))

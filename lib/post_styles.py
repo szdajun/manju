@@ -132,3 +132,76 @@ def bgm_cache_path(preset: str, seed: int, root: str) -> str:
     import os
     h = hashlib.md5(BGM_PRESETS[preset]["caption"].encode()).hexdigest()[:8]
     return os.path.join(root, f"bgm_{preset}_{h}.flac")
+
+
+# ---- 封面渲染器 ----
+COVER_W, COVER_H = 1080, 1920
+
+
+def render_cover(script: dict, kf_dir: str, out: str,
+                 shot_id: int | None = None, series_tag: str = "打工牛马·健身篇") -> str:
+    """封面: 关键帧居中裁 9:16 + 底部渐变黑 + title 大字 + 系列角标 + 集数标.
+
+    关键帧缺 → FileNotFoundError (调用方 warn 跳过, 不阻塞成片)。
+    """
+    import glob
+    import os
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    ep = str(script.get("ep", "")).zfill(2)
+    sid = 1 if shot_id is None else int(shot_id)
+    cands = sorted(glob.glob(os.path.join(
+        kf_dir, f"ep{ep}_shot{sid:02d}_*.png")))
+    if not cands:
+        raise FileNotFoundError(
+            f"封面关键帧缺: ep{ep}_shot{sid:02d}_*.png in {kf_dir}")
+    kf = Image.open(cands[-1]).convert("RGB")
+
+    # 居中裁 9:16 → 覆盖画布
+    tw, th = COVER_W, COVER_H
+    scale = max(tw / kf.width, th / kf.height)
+    kf = kf.resize((int(kf.width * scale) + 1, int(kf.height * scale) + 1))
+    x0 = (kf.width - tw) // 2
+    y0 = (kf.height - th) // 2
+    img = kf.crop((x0, y0, x0 + tw, y0 + th)).convert("RGBA")
+
+    d = ImageDraw.Draw(img, "RGBA")
+    # 底部 35% 线性渐变黑 (title 可读性)
+    gh = int(th * 0.35)
+    for i in range(gh):
+        a = int(220 * i / gh)
+        d.line([(0, th - gh + i), (tw, th - gh + i)], fill=(0, 0, 0, a))
+
+    font_path = "C:/Windows/Fonts/msyhbd.ttc"  # = make_ep01.FONT
+    f_title = ImageFont.truetype(font_path, 96)
+    f_tag = ImageFont.truetype(font_path, 32)
+    f_ep = ImageFont.truetype(font_path, 44)
+
+    # title 大字: 底部 18% 处, 白字黑描边 (超宽缩到 84px)
+    title = str(script.get("title") or f"EP.{ep}")
+    size = 96
+    f_t = ImageFont.truetype(font_path, size)
+    while d.textlength(title, font=f_t) > tw - 120 and size > 60:
+        size -= 8
+        f_t = ImageFont.truetype(font_path, size)
+    tw_text = d.textlength(title, font=f_t)
+    d.text(((tw - tw_text) / 2, th - int(th * 0.18)), title,
+           font=f_t, fill=(255, 255, 255, 255),
+           stroke_width=6, stroke_fill=(0, 0, 0, 255))
+
+    # 左上系列角标: 半透明黑底条 + 白字
+    tag_w = d.textlength(series_tag, font=f_tag)
+    d.rounded_rectangle([24, 40, 24 + tag_w + 36, 40 + 56], radius=12,
+                        fill=(0, 0, 0, 140))
+    d.text((42, 52), series_tag, font=f_tag, fill=(255, 255, 255, 230))
+
+    # 右下集数标
+    ep_s = f"EP.{ep.lstrip('0') or ep}"
+    ep_w = d.textlength(ep_s, font=f_ep)
+    d.text((tw - ep_w - 40, th - 130), ep_s, font=f_ep,
+           fill=(255, 218, 70, 255), stroke_width=4,
+           stroke_fill=(0, 0, 0, 255))
+
+    img.convert("RGB").save(out)
+    return out

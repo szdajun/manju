@@ -43,6 +43,19 @@ def main():
     ap.add_argument("--xfade", type=float, default=0.4)
     ap.add_argument("--transition", default="fade",
                     help="xfade 转场类型: fade/fadeblack/dissolve/…, 默认 fade")
+    # 2026-08-17 后处理风格库 (spec docs/superpowers/specs/2026-08-17-post-enhance-design.md)
+    ap.add_argument("--sub-style", default=None,
+                    choices=["classic", "clean", "variety", "minimal"],
+                    help="字幕风格 (默认剧本 post.sub_style 或 classic 黄字)")
+    ap.add_argument("--transition-mode", default=None, choices=["auto", "fade"],
+                    help="auto=按镜头节奏查表 / fade=全 fade (默认, 现行为)")
+    ap.add_argument("--bgm-preset", default=None,
+                    choices=["pump", "funny", "warm", "chill"],
+                    help="BGM 调性预设 (--bgm 显式路径优先级更高)")
+    ap.add_argument("--cover", action="store_true",
+                    help="出封面 ep{ep}_cover.png (关键帧+title+角标)")
+    ap.add_argument("--cover-shot", type=int, default=None,
+                    help="封面用哪镜关键帧 (默认 shot01)")
     # orchestrator 接入: 配音目录可覆盖 (默认 output/ep{ep}_voice)
     ap.add_argument("--voice-dir", default=None, help="配音 mp3 目录 (默认 output/ep{ep}_voice)")
     # 2026-08-15: MiniMax Music 生成的 BGM 垫底混入 (侧链闪避保语音清晰)
@@ -50,8 +63,8 @@ def main():
                     help="BGM 音乐文件路径 (MiniMax Music mmx 生成; 垫底混入 + 侧链闪避)")
     ap.add_argument("--bgm-gen", action="store_true",
                     help="本地 MiniMax-Music3 生成 BGM (ComfyUI 起着, 需 E:/music_models 权重)")
-    ap.add_argument("--bgm-volume", type=float, default=0.30,
-                    help="BGM 音量系数 0-1 (默认 0.30; 想更燃调 0.5, 更轻调 0.15)")
+    ap.add_argument("--bgm-volume", type=float, default=None,
+                    help="BGM 音量系数 0-1 (默认 preset 音量或 0.30; 想更燃调 0.5, 更轻调 0.15)")
     ap.add_argument("--bgm-caption", default=None,
                     help="--bgm-gen 时 BGM 描述 (默认 lib/music3 健身曲描述)")
     args = ap.parse_args()
@@ -61,6 +74,16 @@ def main():
     i2v_dir = args.i2v_dir or os.path.join(MANJU, "output", f"ep{ep}_i2v_real", "_seedance")
     voice_dir = args.voice_dir or os.path.join(MANJU, "output", f"ep{ep}_voice")
     out = args.out or os.path.join(MANJU, "output", f"ep{ep}_assemble", f"ep{ep}_real.mp4")
+
+    # 2026-08-17 后处理风格库: 三级优先 (剧本 post 字段 > CLI > 默认)
+    from lib.post_styles import (
+        pick_transitions, resolve_bgm, resolve_post_opts, bgm_cache_path)
+    post = resolve_post_opts(script, sub_style=args.sub_style,
+                             transition_mode=args.transition_mode,
+                             bgm_preset=args.bgm_preset,
+                             cover=args.cover, cover_shot=args.cover_shot)
+    print(f"[post] sub={post['sub_style']} transition={post['transition_mode']} "
+          f"bgm={post['bgm_preset'] or '-'} cover={post['cover']}")
 
     shots = [int(x) for x in (args.shots or ",".join(script["shots"].keys())).split(",")
              if x.strip()]
@@ -78,7 +101,8 @@ def main():
         seg_v = os.path.join(tmp, f"seg{s:02d}.mp4")
         if not os.path.exists(seg_v):
             sub_png = os.path.join(tmp, f"sub{s:02d}.png")
-            m.render_subtitle(shot(script, s)["line"], sub_png)
+            m.render_subtitle(shot(script, s)["line"], sub_png,
+                              style=post["sub_style"])
             print(f"=== shot {s:2d} i2v -> seg ===", flush=True)
             m.gen_seg_i2v(src, seg_v, sub_png)
         else:
@@ -95,10 +119,30 @@ def main():
 
     durs = [m.probe_dur(s) for s in segs_av]
     print(f"[durs] {[round(d, 2) for d in durs]}  sum={sum(durs):.2f}")
+    transitions = None
+    if post["transition_mode"] == "auto":
+        transitions = pick_transitions(script)
     m.concat_xfade_av(segs_av, durs, out, fps=m.V4_FPS, ts=m.V4_TS,
-                      xfade=args.xfade, transition=args.transition)
+                      xfade=args.xfade, transition=args.transition,
+                      transitions=transitions)
     total = m.probe_dur(out)
     bgm_path = args.bgm
+    bgm_preset_cfg = (resolve_bgm(post["bgm_preset"])
+                      if post["bgm_preset"] is not None else None)
+    if bgm_path is None and post["bgm_preset"] is not None:
+        p = bgm_preset_cfg
+        cache = bgm_cache_path(post["bgm_preset"], 42, os.path.dirname(out))
+        if os.path.exists(cache):
+            bgm_path = cache
+            print(f"[bgm] 缓存命中 {os.path.basename(cache)}")
+        else:
+            print(f"[bgm] preset={post['bgm_preset']} 生成 ...", flush=True)
+            saved = music3.generate_bgm(caption=p["caption"],
+                                        seconds=total + 5, seed=42)
+            if saved:
+                import shutil as _sh
+                _sh.copyfile(saved[-1], cache)
+                bgm_path = cache
     if bgm_path is None and args.bgm_gen:
         # 本地 Music3 生成 BGM (时长=成片总长+余量, 混音 atrim 会截)
         print(f"[bgm] 本地生成 BGM ({total + 5:.0f}s, 健身曲) ...", flush=True)
@@ -111,12 +155,25 @@ def main():
         else:
             print("[bgm] ⚠ 本地生成无输出 (ComfyUI 起着? E:/music_models 权重在?)", flush=True)
     if bgm_path:
-        print(f"[bgm] 混入 {os.path.basename(bgm_path)} (侧链闪避) ...", flush=True)
+        # 音量三级: --bgm-volume 显式 > preset 音量 > 0.30 (旧默认)
+        vol = (args.bgm_volume if args.bgm_volume is not None
+               else (bgm_preset_cfg["volume"] if bgm_preset_cfg else 0.30))
+        print(f"[bgm] 混入 {os.path.basename(bgm_path)} (侧链闪避, vol={vol:.2f}) ...", flush=True)
         out_mixed = out + ".bgm.mp4"
-        m.mix_bgm(out, bgm_path, out_mixed, bgm_volume=args.bgm_volume)
+        m.mix_bgm(out, bgm_path, out_mixed, bgm_volume=vol)
         os.replace(out_mixed, out)
         total = m.probe_dur(out)
         print(f"[bgm] 完成: 语音清晰, BGM 垫底", flush=True)
+    if post["cover"]:
+        from lib.post_styles import render_cover
+        # kf 目录 = orchestrator default_out_dirs["kf"] (本脚本此前不 import kf 目录)
+        dirs_kf = os.path.join(MANJU, "output", f"ep{ep}_real")
+        cover_out = os.path.join(os.path.dirname(out), f"ep{ep}_cover.png")
+        try:
+            render_cover(script, dirs_kf, cover_out, shot_id=post["cover_shot"])
+            print(f"[cover] {cover_out}")
+        except FileNotFoundError as e:
+            print(f"[cover] WARN 跳过: {e}")
     print(f"\n[saved] {out}  {total:.2f}s  ({len(segs_av)} 镜, xfade={args.xfade}, "
           f"{args.transition}, 写实 Seedance + MiniMax 女声"
           + (f" + BGM={os.path.basename(bgm_path)}" if bgm_path else "") + ")")

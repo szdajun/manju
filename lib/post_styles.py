@@ -134,6 +134,30 @@ def bgm_cache_path(preset: str, seed: int, root: str) -> str:
     return os.path.join(root, f"bgm_{preset}_{h}.flac")
 
 
+# ---- 组装选项三级优先合并 (make_ep03_real CLI 接线, Task 5) ----
+DEFAULT_POST = {"sub_style": "classic", "transition_mode": "fade",
+                "bgm_preset": None, "cover": False, "cover_shot": None}
+
+
+def resolve_post_opts(script: dict, **cli) -> dict:
+    """三级优先合并: 剧本 post 字段 > CLI > 默认。非法 key ValueError.
+
+    返回 {sub_style, transition_mode, bgm_preset, cover, cover_shot}。
+    (CLI 值 None = 未传, 让位剧本/默认; post 值 None 同理视为未设。)
+    """
+    post = dict(script.get("post") or {})
+    merged = dict(DEFAULT_POST)
+    merged.update({k: v for k, v in cli.items() if v is not None and k in DEFAULT_POST})
+    merged.update({k: v for k, v in post.items()
+                   if k in DEFAULT_POST and v is not None})
+    resolve_style(merged["sub_style"])          # 校验, 未知 key ValueError
+    if merged["transition_mode"] not in ("auto", "fade"):
+        raise ValueError(f"未知 transition_mode {merged['transition_mode']!r}")
+    if merged["bgm_preset"] is not None:
+        resolve_bgm(merged["bgm_preset"])
+    return merged
+
+
 # ---- 封面渲染器 ----
 COVER_W, COVER_H = 1080, 1920
 

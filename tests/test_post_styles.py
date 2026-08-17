@@ -165,6 +165,31 @@ def test_render_cover_missing_kf_raises(tmp_path):
         render_cover(script, str(tmp_path / "nope"), str(tmp_path / "c.png"))
 
 
+# ---- 组装选项合并 (CLI 优先级纯函数, Task 5) ----
+
+from lib.post_styles import resolve_post_opts  # noqa: E402
+
+
+def test_resolve_post_opts_priority():
+    """剧本 post > CLI > 默认."""
+    script = {"post": {"sub_style": "variety", "bgm_preset": "warm"}}
+    got = resolve_post_opts(script, sub_style="clean", bgm_preset=None)
+    assert got["sub_style"] == "variety"        # 剧本赢
+    assert got["bgm_preset"] == "warm"
+    assert got["transition_mode"] == "fade"     # 双缺 → 默认
+
+
+def test_resolve_post_opts_cli_fills_gap():
+    got = resolve_post_opts({}, sub_style="minimal", transition_mode="auto")
+    assert got == {"sub_style": "minimal", "transition_mode": "auto",
+                   "bgm_preset": None, "cover": False, "cover_shot": None}
+
+
+def test_resolve_post_opts_rejects_unknown():
+    with pytest.raises(ValueError):
+        resolve_post_opts({"post": {"sub_style": "neon"}})
+
+
 def test_render_cover_gradient_not_solid_black(tmp_path):
     """渐变区不是实心黑 (RGBA 画布不混 alpha 的回归, 2026-08-17 教训)."""
     from PIL import Image

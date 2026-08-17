@@ -183,6 +183,7 @@ def build_face_body_shot_workflow(
     weight_body=0.70,          # 全身 ref weight (调研推荐值, 待实测调)
     scene_ref_name=None,       # P1-2 场景参考图 (空景) → 锁背景
     weight_scene=0.35,         # 场景 IPAdapter weight (2026-08-17 A/B/C 标定: 0.5 压身份, 0.35 平衡)
+    face_schedule="linear",    # 脸 adapter 调度: linear=原 | late-weakend=后期弱化 (防大头, 2026-08-17)
     weight_type="linear",
     embeds_scaling="V only",
     denoise=1.0,
@@ -206,6 +207,14 @@ def build_face_body_shot_workflow(
     """
     if seed is None:
         seed = int.from_bytes(os.urandom(4), "big") % (2**32)
+    # face_schedule (2026-08-17): "late-weakend" 前段全权重 (定身份), 后段提前撤
+    # (end 0.55), 防 PLUS FACE 特写构图渗入放大头身比 (512 头像 ref 固有).
+    if face_schedule == "late-weakend":
+        _wt, _sa, _ea = weight_type, 0.0, 0.55
+    elif face_schedule == "early":
+        _wt, _sa, _ea = weight_type, 0.0, 0.30
+    else:  # linear: 原行为
+        _wt, _sa, _ea = weight_type, 0.0, 1.0
     wf = {
         "ckpt": {"class_type": "CheckpointLoaderSimple",
                  "inputs": {"ckpt_name": ckpt}},
@@ -218,15 +227,15 @@ def build_face_body_shot_workflow(
         "unified": {"class_type": "IPAdapterUnifiedLoader",
                     "inputs": {"model": ["ckpt", 0],
                                "preset": "PLUS FACE (portraits)"}},
-        # 第一个 adapter: 脸 ref → 锁脸
+        # 第一个 adapter: 脸 ref → 锁脸 (face_schedule 调度见函数头)
         "ipa_face": {"class_type": "IPAdapterAdvanced",
                      "inputs": {"model": ["unified", 0],
                                 "ipadapter": ["unified", 1],
                                 "image": ["ref_face", 0],
                                 "weight": weight_face,
-                                "weight_type": weight_type,
+                                "weight_type": _wt,
                                 "combine_embeds": "concat",
-                                "start_at": 0.0, "end_at": 1.0,
+                                "start_at": _sa, "end_at": _ea,
                                 "embeds_scaling": embeds_scaling}},
         # 第二个 adapter: 全身 ref → 尝试锁衣 (链式, 吃 ipa_face 输出)
         "ipa_body": {"class_type": "IPAdapterAdvanced",

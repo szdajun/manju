@@ -86,6 +86,15 @@ def main():
     ap.add_argument("--weight-scene", type=float, default=0.35,
                     help="场景 IPAdapter weight (默认 0.35; 2026-08-17 A/B/C 标定: "
                          "0.5 背景一致但 face_sim 0.38→0.22, 0.35 背景仍收敛且身份保留 0.24+)")
+    # 2026-08-17 用户反馈: 无锁组脸显著大/头身比失衡 (场景锁组轻得多) + 塑料感.
+    # 根因: PLUS FACE adapter 0.95 全程 (start 0→end 1) 把"脸部特写构图"也注入,
+    #       脸 ref 是 512 头像 → 大头倾向; late-weakend 降采样后期影响,
+    #       extra-neg 治塑料皮肤 (neg 已有 plastic skin 但再显式压 waxy doll).
+    ap.add_argument("--face-schedule", default="late-weakend",
+                    choices=["linear", "late-weakend", "early"],
+                    help="脸 adapter 采样调度 (默认 late-weakend: 前期定构图, 后期弱化防大头)")
+    ap.add_argument("--extra-neg", default=None,
+                    help="附加负向词 (默认叠加治塑料感词组, --extra-neg '' 关闭)")
     args = ap.parse_args()
 
     # 读剧本数据 (自动探测 output/epXX/script.json / scripts/epXX.json / lib.epXX_shots)
@@ -138,22 +147,29 @@ def main():
             print(f"[upload] shot{s} 说话人 {spk} body -> {body_name}", flush=True)
 
         pos = build_positive(s, script)
+        # 塑料感治理 (2026-08-17 用户反馈): 默认叠 waxy doll skin 治 SDXL 塑料皮肤
+        neg = script["neg"]
+        if args.extra_neg is None:
+            neg += ", waxy doll skin, overly smooth skin, rubbery skin texture"
+        elif args.extra_neg:
+            neg += f", {args.extra_neg}"
         if body_name:
             wf = build_face_body_shot_workflow(
                 ref_face_name=face_name,
                 ref_body_name=body_name,
-                positive=pos, negative=script["neg"],
+                positive=pos, negative=neg,
                 ckpt=args.ckpt, seed=args.seed,
                 width=args.width, height=args.height, cfg=args.cfg,
                 weight_face=args.weight_face, weight_body=args.weight_body,
                 scene_ref_name=scene_name, weight_scene=args.weight_scene,
+                face_schedule=args.face_schedule,
                 filename_prefix=f"{prefix}{s:02d}",
             )
             mode = "DUAL face+body" + ("+scene" if scene_name else "")
         else:
             wf = build_face_shot_workflow(
                 ref_image_name=face_name,
-                positive=pos, negative=script["neg"],
+                positive=pos, negative=neg,
                 ckpt=args.ckpt, seed=args.seed,
                 width=args.width, height=args.height, cfg=args.cfg,
                 ipadapter_weight=args.weight_face,

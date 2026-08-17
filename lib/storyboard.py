@@ -203,6 +203,23 @@ def load_script(ep: str | int, *, source: str | None = None) -> dict:
 
 # ---- 剧本数据访问器 (Phase 3 通用化: 阶段脚本按每镜说话人取字段) ----
 
+_INNER_MONOLOGUE_RE = None  # lazy compile (见 clean_line)
+
+
+def clean_line(line: str) -> str:
+    """台词清洗: 剥"（内心：...）"标注壳, 只留独白内容 (TTS 念出+字幕双防线).
+
+    2026-08-18 ep22 镜3 教训: LLM 违规把 voiceover 台词写成 "（内心：说好的不喘气呢！）",
+    脏 line 直通 TTS (念出"内心") 和字幕 (显示括注)。规范在 scriptgen prompt 里
+    早有, 但纯靠 LLM 自觉 — 此函数是程序化兜底, 喂 TTS/字幕前过一遍。
+    兼容全角/半角括号、全角/半角冒号; 普通台词 (无标注) 原样返回。
+    """
+    import re
+    text = str(line or "").strip()
+    m = re.fullmatch(r"[（(]\s*内心\s*[:：]\s*(.+?)[）)]", text)
+    return m.group(1).strip() if m else text
+
+
 def shot(script: dict, sid: int | str) -> dict:
     """规范化镜头访问: sid 传 str 或 int 均可."""
     return script["shots"][str(sid)]

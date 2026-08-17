@@ -25,7 +25,8 @@ os.environ.setdefault("MANJU_TTS", "minimax")
 from lib.video_gen import generate, _extract_last_frame  # noqa: E402  # provider 由 MANJU_VIDEOGEN 切换 (seedance/h3_local/ltx_local)
 from lib.storyboard import (  # noqa: E402
     LINE_TYPE_AMBIENT, LINE_TYPE_DIALOG, LINE_TYPE_VOICEOVER,
-    character, frame_chars, line_type, load_script, shot, speaker)
+    character, clean_line, frame_chars, line_type, load_script, shot,
+    speaker)
 from lib import h3prompt  # noqa: E402  # 官方六段式 prompt builder (2026-08-15)
 from lib.tts import synthesize  # noqa: E402  # 对话镜: 台词 TTS → 喂 H3 驱动口型
 
@@ -127,7 +128,7 @@ def _build_dual_dialog_prompt(script: dict, sid: int | str) -> str:
     spk = speaker(script, sid)
     others = [c for c in script["characters"] if c != spk]
     other = others[0] if others else spk
-    line = shot(script, sid)["line"] or ""
+    line = clean_line(shot(script, sid)["line"] or "")  # 剥"（内心：）"壳, 防 H3 念出
     line = line.replace('"', "'").replace("\n", " ")
     scene = shot(script, sid)["shot"] or ""
     # ⚠ 2026-08-07: Picture 1 = 倾听者 (ref0), Picture 2 = 说话者 (ref1), 对齐 shot2 成功布局.
@@ -205,7 +206,7 @@ def main():
         lt = line_type(script, s)
         # prompt 按镜头类型拼: dialog 中文说话(内嵌台词) / voiceover 闭嘴 / ambient 无台词
         if lt == LINE_TYPE_DIALOG:
-            line = shot(script, s)["line"]
+            line = clean_line(shot(script, s)["line"])
             spk = speaker(script, s)
             # 服装前置 + 英文动作 + 中文说话指令 (锁中文语音 + 锁台词 + 锁服装)
             prompt = (f"{_outfit_prefix(script, s)}, {motion}"
@@ -248,7 +249,7 @@ def main():
                     kw.update({"mode": "dual", "ref_images": refs})
                     if lt == LINE_TYPE_DIALOG:
                         # 双人对话: 说话人音频 + 对话 prompt
-                        line = shot(script, s)["line"]
+                        line = clean_line(shot(script, s)["line"])
                         if not (line or "").strip():
                             print(f"[ERR] shot{s:02d} dialog 镜但 line 为空", flush=True)
                             fail.append(s)
@@ -277,7 +278,7 @@ def main():
                     # 单人对话镜: 台词 TTS → 喂 H3 驱动口型.
                     # ⚠ 落 i2v out 目录 (不进 voice_dir), 组装靠 has_voice 判路由时
                     #   对话镜 has_voice=False → 保留 H3 内嵌语音, 不重复叠 TTS.
-                    line = shot(script, s)["line"]
+                    line = clean_line(shot(script, s)["line"])
                     if not (line or "").strip():
                         print(f"[ERR] shot{s:02d} dialog 镜但 line 为空", flush=True)
                         fail.append(s)

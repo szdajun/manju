@@ -83,6 +83,38 @@ def test_voiceover_no_narration_wording():
     assert "<Audio 1>" not in p
 
 
+# ---- voiceover 发力镜 (2026-08-18 ep22 镜3 教训) ----
+# 沉默子句把"不说话"错写成"闭嘴+轻呼吸+idle", 压过 motion 的喘气描述
+# (用户: 没看到女主喘气的样子)。发力镜应保"不说话"、放"呼吸/嘴型"。
+
+def test_voiceover_exertion_motion_keeps_heavy_breathing():
+    s = _single_script()
+    s["shots"]["2"]["motion"] = ("Linxia lowers the dumbbell and pants heavily, "
+                                 "mouth wide open gasping for air, out of breath")
+    p = h3prompt.build_voiceover_prompt(s, 2)
+    assert "mouth closed" not in p          # 不再压嘴型
+    assert "idle motion" not in p           # 不再压运动幅度
+    assert "stays completely silent" in p   # 沉默本意 (不说话) 保留
+    assert "does not speak" in p
+    assert "breathing exactly as described in the motion" in p  # 呼吸交还 motion
+    assert "mouth open as described" in p   # 嘴型交还 motion
+
+
+def test_voiceover_calm_motion_keeps_strict_silence():
+    p = h3prompt.build_voiceover_prompt(_single_script(), 2)  # motion: "motion2 stays"
+    assert "mouth closed" in p              # 平静镜维持原严格沉默
+    assert "idle motion" in p
+
+
+def test_ambient_exertion_motion_keeps_heavy_breathing():
+    s = _single_script()
+    s["shots"]["3"]["motion"] = ("Linxia catches her breath, panting and gasping, "
+                                 "exhausted and sweaty after the set")
+    p = h3prompt.build_ambient_prompt(s, 3)
+    assert "mouth closed" not in p
+    assert "does not speak" in p
+
+
 # ---- ambient ----
 
 def test_ambient_silence_and_soundscape():

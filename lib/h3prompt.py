@@ -43,6 +43,23 @@ _SILENT_CLAUSE = ("<Subject 1> stays completely silent with mouth closed, does n
                   "lips remaining closed.")
 _SILENT_CLAUSE_AMB = ("<Subject 1> stays completely silent with mouth closed, does not "
                       "speak and has no speech, natural breathing only.")
+# 发力镜沉默子句 (2026-08-18 ep22 镜3 教训): motion 写喘气/发力时, "闭嘴+轻呼吸+idle"
+# 会压过喘气描述 (用户看不到喘气)。"不说话"≠"不喘气": 保沉默, 放呼吸/嘴型交还 motion。
+_SILENT_CLAUSE_EXERTION = ("<Subject 1> stays completely silent and does not speak or "
+                           "say any words, breathing exactly as described in the motion, "
+                           "mouth open as described, no speech sounds, only breath sounds.")
+# 发力/喘气关键词 (检测 motion 是否发力镜; 小写匹配)
+_EXERTION_WORDS = (
+    "pant", "gasp", "out of breath", "breathless", "winded", "catching her breath",
+    "catches his breath", "catches her breath", "exhausted", "heaving", "sweat",
+    "trembling", "gasping", "huffing", "puffing", "winded", "heavy lifting", "wiped out",
+)
+
+
+def _is_exertion_motion(motion: str) -> bool:
+    """motion 含发力/喘气词 → True (沉默子句切发力版, 不压呼吸/嘴型)."""
+    low = (motion or "").lower()
+    return any(w in low for w in _EXERTION_WORDS)
 
 
 # ============ helpers ============
@@ -155,6 +172,16 @@ non_diegetic_music:
 N/A"""
 
 
+def _silent_clause(script: dict, sid: int | str, ambient: bool = False) -> str:
+    """沉默子句按镜选: 发力镜 (喘气/力竭) 用发力版, 其余用严格版.
+
+    ambient=True → 严格版用 _SILENT_CLAUSE_AMB (历史行为).
+    """
+    if _is_exertion_motion(shot(script, sid).get("motion", "")):
+        return _SILENT_CLAUSE_EXERTION
+    return _SILENT_CLAUSE_AMB if ambient else _SILENT_CLAUSE
+
+
 def build_voiceover_prompt(script: dict, sid: int | str) -> str:
     """单人旁白 (无音频; ⛔ 不写旁白字样, TTS 旁白由组装叠加)."""
     sh = shot(script, sid)
@@ -175,7 +202,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_SILENT_CLAUSE}
+[Shot 1] {scene}. {motion} {_silent_clause(script, sid)}
 
 overall_soundscape:
 {sound}
@@ -204,7 +231,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_SILENT_CLAUSE_AMB}
+[Shot 1] {scene}. {motion} {_silent_clause(script, sid, ambient=True)}
 
 overall_soundscape:
 {sound}

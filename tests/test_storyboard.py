@@ -145,3 +145,21 @@ def test_line_type_module_passthrough(tmp_path):
         assert line_type(script, 1) == LINE_TYPE_VOICEOVER
     finally:
         delattr(mod, "LINE_TYPE")
+
+
+# ---- clean_line 台词清洗 (2026-08-18 ep22 镜3 教训: "（内心：...）" 被念出) ----
+
+def test_clean_line_strips_inner_monologue_marker():
+    """voiceover 台词的"（内心：...）"标注壳剥掉, 只留独白内容."""
+    from lib.storyboard import clean_line
+    assert clean_line("（内心：说好的不喘气呢！）") == "说好的不喘气呢！"
+    assert clean_line("(内心：说好的不喘气呢！)") == "说好的不喘气呢！"
+    assert clean_line("（内心:太累了吧）") == "太累了吧"
+
+
+def test_clean_line_plain_lines_untouched():
+    """普通台词/无标注不受影响."""
+    from lib.storyboard import clean_line
+    assert clean_line("今天开始，我要做一个真正自律的人。") == "今天开始，我要做一个真正自律的人。"
+    assert clean_line("") == ""
+    assert clean_line("第一组哑铃，就从现在开始！") == "第一组哑铃，就从现在开始！"

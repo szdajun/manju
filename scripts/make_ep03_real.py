@@ -23,7 +23,7 @@ MANJU = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(MANJU, "scripts"))
 import make_ep01 as m  # noqa: E402  gen_seg_i2v/render_subtitle/mux_seg_audio/concat_xfade_av/probe_dur
 sys.path.insert(0, MANJU)
-from lib.storyboard import load_script, shot  # noqa: E402
+from lib.storyboard import clean_line, load_script, shot  # noqa: E402
 from lib import music3  # noqa: E402  # 本地 MiniMax-Music3 BGM 生成 (2026-08-15)
 
 
@@ -102,7 +102,7 @@ def main():
         seg_v = os.path.join(tmp, f"seg{s:02d}_{post['sub_style']}.mp4")
         if not os.path.exists(seg_v):
             sub_png = os.path.join(tmp, f"sub{s:02d}_{post['sub_style']}.png")
-            m.render_subtitle(shot(script, s)["line"], sub_png,
+            m.render_subtitle(clean_line(shot(script, s)["line"]), sub_png,
                               style=post["sub_style"])
             print(f"=== shot {s:2d} i2v -> seg ===", flush=True)
             m.gen_seg_i2v(src, seg_v, sub_png)

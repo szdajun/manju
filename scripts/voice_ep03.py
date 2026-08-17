@@ -22,7 +22,7 @@ os.environ.setdefault("MANJU_TTS", "minimax")
 from lib.tts import synthesize, PROVIDER  # noqa: E402  # TTS provider (MANJU_TTS)
 from lib.video_gen import PROVIDER as VIDEO_PROVIDER  # noqa: E402  # i2v provider (MANJU_VIDEOGEN)
 from lib.storyboard import (  # noqa: E402
-    LINE_TYPE_DIALOG, character, line_type, load_script, shot)
+    LINE_TYPE_DIALOG, character, clean_line, line_type, load_script, shot)
 
 FFPROBE = "~/ffmpeg/ffprobe.exe"
 MARGIN = 0.5
@@ -63,7 +63,7 @@ def main():
     print("-" * 60)
     results = []
     for s in shots:
-        line = shot(script, s)["line"]
+        line = clean_line(shot(script, s)["line"])  # 剥"（内心：）"壳, 防 TTS 念出
         voice_id = character(script, s)["voice_id"]
         out = os.path.join(out_dir, f"voice_shot{s:02d}.mp3")
         # 端到端整合 (2026-08-06): 只生成组装阶段需要的 TTS.

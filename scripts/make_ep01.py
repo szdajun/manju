@@ -19,9 +19,14 @@ v4: 写实版(Seedance i2v 8 镜 {1,3,4,5,6,7,8,10})。片段已是动态视频(
 import argparse
 import os
 import subprocess
+import sys
 import tempfile
 
 from PIL import Image, ImageDraw, ImageFont
+
+MANJU = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if MANJU not in sys.path:  # CLI 直跑 (python scripts/make_ep01.py) 时 lib/ 可导入
+    sys.path.insert(0, MANJU)
 
 FFMPEG = "~/ffmpeg/ffmpeg.exe"
 FFPROBE = "~/ffmpeg/ffprobe.exe"
@@ -109,8 +114,13 @@ def wrap_text(text, max_chars=9, hard=15):
     return lines
 
 
-def render_subtitle(text, out):
-    """底部黄字黑描边 + 半透明黑底圆角条。720×1280 透明 PNG。"""
+def render_subtitle(text, out, style="classic"):
+    """底部字幕 + 半透明底条。720×1280 透明 PNG。
+
+    style: lib.post_styles.SUBTITLE_STYLES key (默认 classic = 原黄字黑边)。
+    """
+    from lib.post_styles import resolve_style
+    st = resolve_style(style)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     lines = wrap_text(text or "")
     if not lines:
@@ -118,23 +128,25 @@ def render_subtitle(text, out):
         img.save(out)
         return
     d = ImageDraw.Draw(img)
-    font = ImageFont.truetype(FONT, 42)
-    line_h = 56
+    font = ImageFont.truetype(FONT, st["font_size"])
+    line_h = int(st["font_size"] * 4 / 3)
     total_h = len(lines) * line_h
     y0 = H - total_h - 120
     widths = [d.textlength(l, font=font) for l in lines]
     maxw = max(widths)
-    pad_x, pad_y = 30, 18
-    bx0 = (W - maxw) / 2 - pad_x
-    by0 = y0 - pad_y
-    bx1 = (W + maxw) / 2 + pad_x
-    by1 = y0 + total_h + pad_y - 4
-    d.rounded_rectangle([bx0, by0, bx1, by1], radius=14, fill=(0, 0, 0, 165))
+    if st["box"]:
+        pad_x, pad_y = 30, 18
+        bx0 = (W - maxw) / 2 - pad_x
+        by0 = y0 - pad_y
+        bx1 = (W + maxw) / 2 + pad_x
+        by1 = y0 + total_h + pad_y - 4
+        d.rounded_rectangle([bx0, by0, bx1, by1], radius=st["radius"],
+                            fill=st["box"])
     for i, (l, w) in enumerate(zip(lines, widths)):
         x = (W - w) / 2
         y = y0 + i * line_h
-        d.text((x, y), l, font=font, fill=(255, 218, 70, 255),
-               stroke_width=3, stroke_fill=(0, 0, 0, 255))
+        d.text((x, y), l, font=font, fill=tuple(st["fill"]),
+               stroke_width=st["stroke_w"], stroke_fill=tuple(st["stroke"]))
     img.save(out)
 
 

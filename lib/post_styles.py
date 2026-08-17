@@ -1,0 +1,38 @@
+"""lib/post_styles.py — 后处理风格库 (2026-08-17): 字幕/转场/BGM/封面单一真相源.
+
+纯数据 + 纯函数 + 封面渲染器。make_ep01 渲染函数按 style key 取参,
+默认 classic = 现黄字黑边行为 (零破坏)。
+"""
+from __future__ import annotations
+
+# ---- 字幕预设 (只差色/描边/底条; 字体/换行/Y位不动) ----
+SUBTITLE_STYLES: dict[str, dict] = {
+    "classic": {  # 现黄字版 (默认)
+        "font_size": 42, "fill": (255, 218, 70),
+        "stroke": (0, 0, 0, 255), "stroke_w": 3,
+        "box": (0, 0, 0, 165), "radius": 14,
+    },
+    "clean": {    # 白字高对比
+        "font_size": 44, "fill": (255, 255, 255),
+        "stroke": (0, 0, 0, 220), "stroke_w": 4,
+        "box": (0, 0, 0, 190), "radius": 18,
+    },
+    "variety": {  # 综艺花字
+        "font_size": 46, "fill": (255, 255, 255),
+        "stroke": (255, 90, 30, 255), "stroke_w": 6,
+        "box": (255, 90, 30, 200), "radius": 22,
+    },
+    "minimal": {  # 裸字细描边
+        "font_size": 40, "fill": (255, 255, 255),
+        "stroke": (0, 0, 0, 160), "stroke_w": 2,
+        "box": None, "radius": 0,
+    },
+}
+
+
+def resolve_style(key: str) -> dict:
+    """取字幕预设。未知 key → ValueError 带合法 key 列表."""
+    if key not in SUBTITLE_STYLES:
+        raise ValueError(
+            f"未知字幕风格 {key!r}, 可选: {sorted(SUBTITLE_STYLES)}")
+    return SUBTITLE_STYLES[key]

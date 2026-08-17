@@ -17,7 +17,7 @@ COMFYUI_ROOT = Path(r"../ComfyUI")
 START_IMAGE = Path(r"../manju/output/ep05_poc_v1/keyframes/kf_00.png")
 OUTPUT = Path(r"../manju/output/ep05_poc_v1/motion/wan2_2_test.mp4")
 MODEL = "Wan2_2-TI2V-5B_fp8_e4m3fn_scaled_KJ.safetensors"
-VAE = "Wan2_2_VAE_bf16.safetensors"
+VAE = "Wan2.2_VAE.pth"  # 官方 Wan-AI Wan2.2_VAE.pth (2.8GB, WanVideoVAELoader 自动检测格式)
 T5 = "umt5-xxl-enc-fp8_e4m3fn.safetensors"
 PROMPT = (
     "anime cartoon child character, asian girl age 6-8, red twin tails hair, "
@@ -25,7 +25,7 @@ PROMPT = (
     "happily in soft pastel park, gentle motion, masterpiece, 24fps"
 )
 NEGATIVE = "blurry, low quality, deformed face, extra limbs, hat, sunglasses, dark"
-WIDTH, HEIGHT, NUM_FRAMES, FPS = 832, 480, 24, 12
+WIDTH, HEIGHT, NUM_FRAMES, FPS = 512, 288, 16, 12  # 降分辨率/帧数 (12GB 显存: T5 6.7G 常驻 + VAE + diffusion 块交换)
 
 
 def request_json(path: str, data: bytes | None = None, content_type: str = "application/json") -> dict:
@@ -79,8 +79,19 @@ def build_workflow(uploaded_image: str) -> dict:
                 "negative_prompt": NEGATIVE,
                 "t5": ["4", 0],
                 "model_to_offload": ["2", 0],
-                "force_offload": True,
+                # 2026-08-03: force_offload=True 触发 encoder.model.to(offload_device)
+                # Windows CUDA access violation (torch 2.11 cu128 bug). 改 False 让 T5 留 GPU,
+                # 靠 diffusion 块交换省显存.
+                "force_offload": False,
                 "device": "gpu",
+            },
+        },
+        "10": {
+            "class_type": "WanVideoBlockSwap",
+            "inputs": {
+                "blocks_to_swap": 28,  # 5B 模型 30 块, swap 28 留 2 块 GPU
+                "offload_img_emb": False,
+                "offload_txt_emb": False,
             },
         },
         "6": {
@@ -104,6 +115,7 @@ def build_workflow(uploaded_image: str) -> dict:
                 "model": ["2", 0],
                 "image_embeds": ["6", 0],
                 "text_embeds": ["5", 0],
+                "block_swap": ["10", 0],
                 "steps": 12,
                 "cfg": 5.0,
                 "shift": 8.0,

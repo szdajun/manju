@@ -272,6 +272,11 @@ def build_plan(script: dict, *, ep: str,
                     "--out", final]
             out = final
 
+        # todo 空 = 该阶段全部增量跳过 → 不再生成子进程 (避免"全 done"仍重跑:
+        # kf 脚本无自身 skip 检测, 会在同目录用新 seed 覆盖式重生成关键帧)
+        if not todo and stage != "assemble":
+            continue
+
         plan.append(StagePlan(
             stage=stage, script=script_name, argv=argv,
             todo_shots=todo, skipped=skipped, output=out))

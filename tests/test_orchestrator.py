@@ -14,6 +14,10 @@ from lib.orchestrator import (
 )
 from lib.storyboard import load_script
 
+# 空输出根 (pytest tmp 工厂外的固定空目录): 让 build_plan 不受真实历史产物影响
+# (2026-08-17 起 todo 全空的阶段直接不出计划, 测试需在"无产物"基线上断言)
+MANJU_TMP = os.path.join(os.path.dirname(__file__), "_tmp_out")
+
 
 @pytest.fixture
 def ep03():
@@ -29,15 +33,15 @@ def test_scripts_for_known_and_unknown():
 
 
 def test_build_plan_all_stages(ep03):
-    """默认 → 5 阶段, 顺序 kf,i2v,verify,voice,assemble."""
-    plan = build_plan(ep03, ep="03")
+    """默认 (无产物) → 5 阶段, 顺序 kf,i2v,verify,voice,assemble."""
+    plan = build_plan(ep03, ep="03", out_root=str(MANJU_TMP))
     assert [p.stage for p in plan] == list(STAGES)
     assert len(plan) == 5
 
 
 def test_plan_scripts_match_ep03():
     """阶段脚本名与 EP_SCRIPTS 一致."""
-    plan = build_plan(load_script("03"), ep="03")
+    plan = build_plan(load_script("03"), ep="03", out_root=str(MANJU_TMP))
     names = {p.stage: p.script for p in plan}
     assert names["kf"] == "gen_ep03_real_batch.py"
     assert names["i2v"] == "gen_ep03_seedance.py"
@@ -48,7 +52,7 @@ def test_plan_scripts_match_ep03():
 
 def test_verify_stage_uses_fitness_python(ep03, tmp_path):
     """verify 阶段用 fitness venv python + --report, 落 i2v 目录."""
-    plan = build_plan(ep03, ep="03")
+    plan = build_plan(ep03, ep="03", out_root=str(MANJU_TMP))
     v = next(p for p in plan if p.stage == "verify")
     assert "fitness-video-pipeline" in v.argv[0]      # fitness venv (insightface)
     assert "check_i2v_face.py" in v.argv[1]
@@ -79,15 +83,26 @@ def test_incremental_skip(tmp_path, ep03):
     assert set(by_stage["kf"].todo_shots) == {1, 2, 3, 4, 5}
 
 
-def test_only_filter(ep03):
-    """only={"voice"} → 仅 1 阶段."""
-    plan = build_plan(ep03, ep="03", only={"voice"})
+def test_all_done_stage_not_planned(tmp_path, ep03):
+    """todo 空的阶段直接不出计划 (kf 无自身 skip, 全 done 重跑会新 seed 覆盖关键帧)."""
+    kf_dir = os.path.join(str(tmp_path), "kf")
+    os.makedirs(kf_dir, exist_ok=True)
+    for s in range(1, 6):
+        open(os.path.join(kf_dir, f"ep03_shot{s:02d}_seed1.png"), "w").close()
+    plan = build_plan(ep03, ep="03", out_root=str(tmp_path))
+    assert "kf" not in [p.stage for p in plan]      # kf 全 done → 不跑
+    assert "i2v" in [p.stage for p in plan]         # i2v 无产物 → 照常
+
+
+def test_only_filter(ep03, tmp_path):
+    """only={"voice"} → 仅 1 阶段 (out_root 指空目录防真实产物干扰)."""
+    plan = build_plan(ep03, ep="03", only={"voice"}, out_root=str(tmp_path))
     assert [p.stage for p in plan] == ["voice"]
 
 
-def test_skip_filter(ep03):
+def test_skip_filter(ep03, tmp_path):
     """skip={"kf"} → 无 kf."""
-    plan = build_plan(ep03, ep="03", skip={"kf"})
+    plan = build_plan(ep03, ep="03", skip={"kf"}, out_root=str(tmp_path))
     stages = [p.stage for p in plan]
     assert "kf" not in stages
     assert "i2v" in stages

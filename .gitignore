@@ -56,3 +56,4 @@ tools/
 _zdiag/
 # 本地 claude 配置
 .claude/
+tests/_tmp_out/

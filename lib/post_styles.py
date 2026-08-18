@@ -80,7 +80,9 @@ def _bgm_presets() -> dict[str, dict]:
     from lib import music3
     return {
         "pump": {  # 燃/训练 (现默认)
-            "caption": music3.DEFAULT_BGM_CAPTION, "volume": 0.30,
+            "caption": music3.DEFAULT_BGM_CAPTION,
+            # 同 funny 实测修正 (源轻, 0.30 垫不出声)
+            "volume": 0.55,
         },
         "funny": {  # 滑稽轻快 (打工牛马喜剧向)
             "caption": (
@@ -91,7 +93,9 @@ def _bgm_presets() -> dict[str, dict]:
                 "mood.\n\n"
                 "Audio Prompt: pizzicato strings, comedic woodwinds, light "
                 "percussion, shuffle groove, playful and bouncy, no vocals"),
-            "volume": 0.25,
+            # 2026-08-18 实测修正: Music3 出片 mean≈-21dB, 0.25 垫底≈-33dB 全被
+            # 环境音 (-11.8dB) 埋掉。0.55≈-16dB, 在 H3 环境音下可闻不抢语音。
+            "volume": 0.55,
         },
         "warm": {   # 温情
             "caption": (
@@ -101,7 +105,7 @@ def _bgm_presets() -> dict[str, dict]:
                 "guitar, hopeful and heartwarming.\n\n"
                 "Audio Prompt: soft piano, warm strings, acoustic guitar, "
                 "slow build, emotional and hopeful, no vocals"),
-            "volume": 0.22,
+            "volume": 0.55,
         },
         "chill": {  # 丧系自嘲
             "caption": (
@@ -111,7 +115,7 @@ def _bgm_presets() -> dict[str, dict]:
                 "vibe.\n\n"
                 "Audio Prompt: lo-fi rhodes, vinyl crackle, laid-back drums, "
                 "mellow bass, chill and slightly melancholic, no vocals"),
-            "volume": 0.22,
+            "volume": 0.55,
         },
     }
 

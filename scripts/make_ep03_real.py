@@ -17,6 +17,7 @@ vs ep02 差异:
 import argparse
 import glob
 import os
+import subprocess
 import sys
 
 MANJU = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -178,6 +179,35 @@ def main():
         try:
             render_cover(script, dirs_kf, cover_out, shot_id=post["cover_shot"])
             print(f"[cover] {cover_out}")
+            # 2026-08-18: 封面进片头 — 1.2s 定帧卡 (fade in/out) 前接成片,
+            # 平台取首帧即封面; 音频延 cover时长 (BGM 已含, anullsrc 补静音)。
+            cover_d = 1.2
+            out_cov = out + ".cover.mp4"
+            r = subprocess.run(
+                [m.FFMPEG, "-y", "-loop", "1", "-t", f"{cover_d}", "-i", cover_out,
+                 "-i", out,
+                 "-filter_complex",
+                 f"[0:v]scale={m.W}:{m.H}:force_original_aspect_ratio=increase,"
+                 f"crop={m.W}:{m.H},fps={m.V4_FPS},format=yuv420p,"
+                 f"fade=t=in:st=0:d=0.3[cf];"
+                 # 两输入都过 fps → timebase 一致 (xfade 要求 1/24=1/24,
+                 # 成片原生 1/24576 直接接 xfade 会 Invalid argument)
+                 f"[1:v]fps={m.V4_FPS},fade=t=in:st=0:d=0.3[vf];"
+                 f"[cf][vf]xfade=transition=fade:duration=0.3:offset={cover_d - 0.3}[v];"
+                 f"[1:a]adelay={int(cover_d * 1000)}|{int(cover_d * 1000)},"
+                 f"apad[a]",
+                 "-map", "[v]", "-map", "[a]",
+                 *m.enc_args(fps=m.V4_FPS, ts=m.V4_TS),
+                 "-c:a", "aac", "-b:a", "192k",
+                 "-t", f"{total + cover_d:.3f}",
+                 out_cov],
+                capture_output=True, text=True)
+            if r.returncode != 0:
+                print(f"[cover] WARN 片头失败, 用无封面版: {r.stderr[-300:]}")
+            else:
+                os.replace(out_cov, out)
+                total = m.probe_dur(out)
+                print(f"[cover] 片头封面卡 {cover_d}s 已前接 (总长 {total:.2f}s)")
         except Exception as e:  # 2026-08-18 fix: 宽捕获, 封面失败不阻塞成片
             print(f"[cover] WARN 跳过: {e}")
     print(f"\n[saved] {out}  {total:.2f}s  ({len(segs_av)} 镜, xfade={args.xfade}, "

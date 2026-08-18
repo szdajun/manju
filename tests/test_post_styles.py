@@ -117,7 +117,9 @@ def test_bgm_presets_schema():
     assert set(BGM_PRESETS) == {"pump", "funny", "warm", "chill"}
     for key, p in BGM_PRESETS.items():
         assert isinstance(p["caption"], str) and len(p["caption"]) > 50, key
-        assert 0.0 < p["volume"] <= 0.5, key
+        # 2026-08-18: Music3 源 mean≈-21dB, 0.5 以下垫不出声 (实测被环境音埋掉),
+        # 预设整体上调到 0.55 上限 0.8
+        assert 0.0 < p["volume"] <= 0.8, key
 
 
 def test_pump_caption_is_current_default():

@@ -375,9 +375,12 @@ def mix_bgm(video, bgm, dst, bgm_volume=0.30, duck=True):
     """
     dur = probe_dur(video)
     if duck:
+        # 2026-08-18 实测修正: threshold 0.03(≈-30dB) 连 H3 环境音(mean -11.8dB)
+        # 都触发 → BGM 全程被 8:1 压死 (用户: 音乐几乎听不到)。
+        # 提到 0.15(≈-16dB): 只对真语音(>0.15 linear)闪避, 环境音不误压。
         fc = (f"[0:a]asplit=2[va][vc];"
               f"[1:a]atrim=0:{dur},asetpts=PTS-STARTPTS,volume={bgm_volume}[bg];"
-              f"[bg][vc]sidechaincompress=threshold=0.03:ratio=8:attack=30:release=400[duck];"
+              f"[bg][vc]sidechaincompress=threshold=0.15:ratio=8:attack=30:release=400[duck];"
               f"[va][duck]amix=inputs=2:duration=first:normalize=0[outa]")
     else:
         fc = (f"[1:a]atrim=0:{dur},asetpts=PTS-STARTPTS,volume={bgm_volume}[bg];"

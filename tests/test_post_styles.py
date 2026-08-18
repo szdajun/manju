@@ -175,6 +175,35 @@ def test_render_cover_missing_kf_raises(tmp_path):
         render_cover(script, str(tmp_path / "nope"), str(tmp_path / "c.png"))
 
 
+def test_render_cover_frame_src_png(tmp_path):
+    """frame_src 给视频路径但视频解不出 → 回退 kf (frame_src 一律走抽帧)."""
+    kf_dir = tmp_path / "kf"
+    kf_dir.mkdir()
+    _make_kf(str(kf_dir), "ep22_shot01_seed42.png")
+    fake_vid = tmp_path / "fake.mp4"
+    from PIL import Image
+    # 写个解不出视频流的假 .mp4 (纯字节)
+    fake_vid.write_bytes(b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64)
+    script = {"ep": "22", "title": "自律的开始"}
+    out = render_cover(script, str(kf_dir), str(tmp_path / "c.png"),
+                       frame_src=str(fake_vid))
+    # 假视频解不出 → 回退 kf 棕橙底图, 不 raise
+    img = Image.open(out).convert("RGB")
+    px = img.getpixel((540, 400))
+    assert px[0] > 120 and px[1] < 160, px
+
+
+def test_render_cover_frame_src_fallback_to_kf(tmp_path):
+    """frame_src 不存在 → 回退 kf 目录 (不 raise)."""
+    kf_dir = tmp_path / "kf"
+    kf_dir.mkdir()
+    _make_kf(str(kf_dir), "ep22_shot01_seed42.png")
+    script = {"ep": "22", "title": "自律的开始"}
+    out = render_cover(script, str(kf_dir), str(tmp_path / "c.png"),
+                       frame_src=str(tmp_path / "ghost.mp4"))
+    assert (tmp_path / "c.png").exists()
+
+
 # ---- 组装选项合并 (CLI 优先级纯函数, Task 5) ----
 
 from lib.post_styles import resolve_post_opts  # noqa: E402

@@ -176,8 +176,12 @@ def main():
         # kf 目录 = orchestrator default_out_dirs["kf"] (本脚本此前不 import kf 目录)
         dirs_kf = os.path.join(MANJU, "output", f"ep{ep}_real")
         cover_out = os.path.join(os.path.dirname(out), f"ep{ep}_cover.png")
+        # 底图优先 i2v 视频抽帧 (SDXL kf 塑料感重/头身比易崩, 2026-08-18 用户反馈)
+        cover_sid = 1 if post["cover_shot"] is None else post["cover_shot"]
+        frame_src = os.path.join(i2v_dir, f"ep{ep}_shot{cover_sid:02d}.mp4")
         try:
-            render_cover(script, dirs_kf, cover_out, shot_id=post["cover_shot"])
+            render_cover(script, dirs_kf, cover_out, shot_id=post["cover_shot"],
+                         frame_src=frame_src)
             print(f"[cover] {cover_out}")
             # 2026-08-18: 封面进片头 — 1.2s 定帧卡 (fade in/out) 前接成片,
             # 平台取首帧即封面; 音频延 cover时长 (BGM 已含, anullsrc 补静音)。

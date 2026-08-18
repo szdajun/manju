@@ -166,16 +166,62 @@ def resolve_post_opts(script: dict, **cli) -> dict:
 COVER_W, COVER_H = 1080, 1920
 
 
+def extract_video_frame(video: str, out: str, frac: float = 0.35) -> str:
+    """从 i2v 视频抽一帧做封面底图 (2026-08-18 用户建议).
+
+    SDXL 关键帧当封面底图塑料感重/头身比易崩 (H3 i2v 出来的帧自然得多)。
+    frac=0.35 取前段帧 (角色已入画、动态未到幅度大的尾段)。
+    视频缺/抽帧失败 → FileNotFoundError (调用方回退 kf)。
+    """
+    import os
+    import subprocess
+
+    from lib.video_gen import _ffmpeg
+
+    def _dur(p: str) -> float:
+        import json
+        r = subprocess.run([_ffmpeg().replace("ffmpeg.exe", "ffprobe.exe")
+                            if _ffmpeg().endswith(".exe") else "ffprobe",
+                            "-v", "error", "-show_entries", "format=duration",
+                            "-of", "json", p], capture_output=True, text=True)
+        try:
+            return float(json.loads(r.stdout or "{}")["format"]["duration"])
+        except (KeyError, ValueError, json.JSONDecodeError):
+            raise FileNotFoundError(f"无法探测时长 (非视频?): {p}")
+
+    if not os.path.exists(video):
+        raise FileNotFoundError(f"封面源视频缺: {video}")
+    dur = _dur(video)
+    t = max(0.0, min(dur - 0.1, dur * frac))
+    r = subprocess.run(
+        [_ffmpeg(), "-y", "-ss", f"{t:.2f}", "-i", video,
+         "-frames:v", "1", out], capture_output=True, text=True)
+    if r.returncode != 0 or not os.path.exists(out):
+        raise FileNotFoundError(f"抽帧失败 rc={r.returncode}: {r.stderr[-200:]}")
+    return out
+
+
 def render_cover(script: dict, kf_dir: str, out: str,
-                 shot_id: int | None = None, series_tag: str = "打工牛马·健身篇") -> str:
+                 shot_id: int | None = None, series_tag: str = "打工牛马·健身篇",
+                 frame_src: str | None = None) -> str:
     """封面: 关键帧居中裁 9:16 + 底部渐变黑 + title 大字 + 系列角标 + 集数标.
 
-    关键帧缺 → FileNotFoundError (调用方 warn 跳过, 不阻塞成片)。
+    frame_src 给 i2v 视频路径时优先抽帧做底图 (比 SDXL kf 自然, 塑料感轻);
+    抽帧失败回退 kf 目录。kf 也缺 → FileNotFoundError (调用方 warn 跳过)。
     """
     import glob
     import os
 
     from PIL import Image, ImageDraw, ImageFont
+
+    if frame_src:
+        _tmp = out + ".frame.png"
+        try:
+            extract_video_frame(frame_src, _tmp)
+            return _render_cover_from(Image.open(_tmp), script, out, shot_id,
+                                      series_tag)
+        except (FileNotFoundError, OSError, ValueError):
+            pass  # 回退 kf (frame_src 可能是视频/缺文件/PIL 解不了的任何东西)
 
     ep = str(script.get("ep", "")).zfill(2)
     sid = 1 if shot_id is None else int(shot_id)
@@ -184,7 +230,18 @@ def render_cover(script: dict, kf_dir: str, out: str,
     if not cands:
         raise FileNotFoundError(
             f"封面关键帧缺: ep{ep}_shot{sid:02d}_*.png in {kf_dir}")
-    kf = Image.open(cands[-1]).convert("RGB")
+    return _render_cover_from(Image.open(cands[-1]), script, out, shot_id,
+                              series_tag)
+
+
+def _render_cover_from(base: "Image.Image", script: dict, out: str,
+                       shot_id: int | None, series_tag: str) -> str:
+    """封面主体: base 底图 → 居中裁 9:16 → 渐变/大字/角标/集数标 (两源共用)."""
+    import os
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    kf = base.convert("RGB")
 
     # 居中裁 9:16 → 覆盖画布
     tw, th = COVER_W, COVER_H
@@ -193,6 +250,7 @@ def render_cover(script: dict, kf_dir: str, out: str,
     x0 = (kf.width - tw) // 2
     y0 = (kf.height - th) // 2
     img = kf.crop((x0, y0, x0 + tw, y0 + th)).convert("RGB")
+    ep = str(script.get("ep", "")).zfill(2)
 
     d = ImageDraw.Draw(img, "RGBA")
     # 底部 35% 线性渐变黑 (title 可读性)

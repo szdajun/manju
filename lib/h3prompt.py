@@ -182,6 +182,45 @@ def _silent_clause(script: dict, sid: int | str, ambient: bool = False) -> str:
     return _SILENT_CLAUSE_AMB if ambient else _SILENT_CLAUSE
 
 
+def build_dialog_prompt_identity(script: dict, sid: int | str) -> str:
+    """单人对白双参考混合 (R2V A/B, 2026-08-19).
+
+    ref_images = [kf 关键帧, 角色定妆照]: <Picture 1> 锁构图/姿势 (kf),
+    <Picture 2> 锁身份 (定妆照), 两者同为 <Subject 1> — 脸以 <Picture 2> 为准.
+    其余 (音频链/台词/六段式) 与 build_dialog_prompt 一致.
+    """
+    sh = shot(script, sid)
+    fp = character(script, sid).get("fingerprint", "")
+    scene = _capitalize(sh.get("shot", "").rstrip("."))
+    motion = _ensure_period(sh.get("motion", ""))
+    line = _clean_line(sh.get("line", ""))
+    subj = _subject_desc(fp, "<Picture 1>")
+    sound = _soundscape_for(script, sid, "dialog")
+    return f"""subject_definitions:
+<Subject 1> is {subj}.
+<Picture 1> and <Picture 2> show the same person: <Picture 1> and <Picture 2> both depict <Subject 1>.
+<Audio 1> is the speech reference for <Subject 1> (S1), containing a spoken Mandarin female vocal layer.
+
+summary:
+[reference generation + audio reference] The target video shows <Subject 1> in the described gym scene, performing the described motion, and speaking a line in Mandarin while the appearance and clothing stay unchanged. <Picture 1> provides the framing and composition of the shot; <Picture 2> provides the identity of <Subject 1>; <Audio 1> guides the voice and delivery of <Subject 1>'s spoken line.
+
+retention_analysis:
+{_retention_subject(1)}
+<Picture 1> ([Shot 1] composition anchor): fully_preserved - the framing, pose, and composition of the shot are retained.
+<Picture 2> ([Shot 1] identity reference): fully_preserved - the facial identity of <Subject 1> is retained, the face follows <Picture 2>.
+{_retention_audio_ref()}
+
+detailed_description:
+{_style_sentence(script)}
+[Shot 1] {scene}. {motion} {_SPEECH_CLAUSE.format(line=line)}
+
+overall_soundscape:
+{sound}
+
+non_diegetic_music:
+N/A"""
+
+
 def build_voiceover_prompt(script: dict, sid: int | str) -> str:
     """单人旁白 (无音频; ⛔ 不写旁白字样, TTS 旁白由组装叠加)."""
     sh = shot(script, sid)

@@ -276,7 +276,7 @@ def h3_local_i2v(image, prompt, out, duration=5, width=768, height=1344,
                  mode="single", ref_images=None, seed=None,
                  server="http://127.0.0.1:8188", filename_prefix=None,
                  unet_gguf=None, ref_image_size="match", turbo=False,
-                 audio=None, audio_slot="ref_audios"):
+                 audio=None, audio_slot="ref_audios", identity_ref=None):
     """H3 本地 i2v (免费, 2026-08-06). 单人 ImageToVideo 或双人 Ref2VA.
 
     Args:
@@ -293,6 +293,8 @@ def h3_local_i2v(image, prompt, out, duration=5, width=768, height=1344,
         unet_gguf: 覆盖 UNET GGUF (单人 fl2va / 双人 ref2va).
         audio: 台词音频路径 (对话镜, H3 驱动口型). None = 无台词 (环境音).
         audio_slot: "ref_audios" (角色台词) | "ref_video_audios" (参考视频音频).
+        identity_ref: 角色定妆照路径 (R2V A/B, 2026-08-19). 单人对话镜时
+            refs=[kf, 定妆照] 双参考: P1 锁构图, P2 锁身份. None = 原单参考.
 
     Returns: out. 零 API 成本, 768x1344 正式档 (25min/段) / 432x768 迭代档 (6.3min/段).
     """
@@ -325,9 +327,15 @@ def h3_local_i2v(image, prompt, out, duration=5, width=768, height=1344,
         if audio:
             # 对话镜: Ref2VA 单参考图 + 音频驱动口型 (已验证 _h3_single_talk.json 路径;
             # H3 音视频联合生成, 唇型由音频音素驱动). 首帧关键帧作身份参考.
+            # identity_ref (R2V A/B): 双参考 [kf, 定妆照], P1 构图 P2 身份.
             audio_name = _copy_audio_to_comfy_input(audio)
+            if identity_ref:
+                ident_name = client.upload_image(identity_ref)
+                refs = [frame_name, ident_name]
+            else:
+                refs = [frame_name]
             wf = build_h3_ref2va_workflow(
-                [frame_name], prompt, width=width, height=height, length=length,
+                refs, prompt, width=width, height=height, length=length,
                 seed=base, filename_prefix=filename_prefix or "manju_h3",
                 unet_gguf=unet_gguf, ref_image_size=ref_image_size,
                 turbo=turbo, audio=audio_name, audio_slot=audio_slot,

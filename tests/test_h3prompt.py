@@ -152,6 +152,37 @@ def test_dual_dialog_kind_voiceover_soundscape():
     assert "low ventilation hum" in p          # voiceover soundscape (无 footsteps)
 
 
+# ---- identity 双参考 (R2V A/B, 2026-08-19) ----
+
+def test_dialog_identity_two_pictures_one_subject():
+    """双参考混合: Picture 1=kf 构图锚, Picture 2=定妆照身份锚, 同为 Subject 1."""
+    p = h3prompt.build_dialog_prompt_identity(_single_script(), 1)
+    # 六段式结构不变
+    order = [p.index(s) for s in (
+        "subject_definitions:", "summary:", "retention_analysis:",
+        "detailed_description:", "overall_soundscape:", "non_diegetic_music:")]
+    assert order == sorted(order)
+    # Subject 1 由两张 Picture 共同定义 (构图 + 身份)
+    assert "<Subject 1> is the person in <Picture 1>" in p
+    assert "<Picture 1> and <Picture 2> show the same person" in p
+    assert "<Subject 2>" not in p                    # 单人, 不出现第二主体
+    # retention: 两张图分工明确
+    assert "composition anchor" in p                 # P1 构图
+    assert "identity reference" in p                 # P2 身份
+    # 台词/音频链路保持
+    assert "<Audio 1> is the speech reference for <Subject 1> (S1)" in p
+    assert "<d>[中文]今天开始自律</d>" in p
+
+
+def test_dialog_identity_face_from_picture2():
+    """明确脸以 Picture 2 (定妆照) 为准 — 这是 A/B 实验的核心变量."""
+    p = h3prompt.build_dialog_prompt_identity(_single_script(), 1)
+    assert "the face follows <Picture 2>" in p
+    # summary 说明两图分工
+    assert "<Picture 1> provides the framing and composition" in p
+    assert "<Picture 2> provides the identity" in p
+
+
 # ---- soundscape 覆盖 ----
 
 def test_soundscape_override_script_and_shot():

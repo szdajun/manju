@@ -211,6 +211,34 @@ def test_h3_local_i2v_single_dialog_audio(tmp_path):
     assert os.path.exists(out)
 
 
+def test_h3_local_i2v_single_dialog_identity_ref(tmp_path):
+    """单人对话镜 identity_ref: refs=[kf, 定妆照] 双参考 (R2V A/B, 2026-08-19)."""
+    image = tmp_path / "kf.png"; image.write_bytes(b"PNG")
+    ident = tmp_path / "LINXIA_face.png"; ident.write_bytes(b"PNG")
+    out = tmp_path / "out.mp4"
+    fake = _FakeClient()
+
+    def _fake_finalize(src, dst):
+        with open(dst, "wb") as f:
+            f.write(b"FAKE")
+
+    with patch("lib.comfyui_client.ComfyUIClient", return_value=fake), \
+         patch("lib.video_gen._finalize_h3_output", side_effect=_fake_finalize), \
+         patch("lib.video_gen._copy_audio_to_comfy_input",
+               return_value="voice_shot01.mp3"):
+        h3_local_i2v(str(image), "双参考 prompt", str(out), duration=5,
+                     mode="single", audio="F:/voices/voice_shot01.mp3",
+                     identity_ref=str(ident))
+    assert len(fake.gen_calls) == 1
+    wf = fake.gen_calls[0]
+    assert wf["cond"]["class_type"] == "MiniMaxH3ReferenceToVideo"
+    # 双参考: ref_image_0=kf, ref_image_1=定妆照
+    assert "ref_images.ref_image_0" in wf["cond"]["inputs"]
+    assert "ref_images.ref_image_1" in wf["cond"]["inputs"]
+    assert wf["cond"]["inputs"]["ref_audios.ref_audio_0"] == ["audio_line", 0]
+    assert os.path.exists(out)
+
+
 def test_h3_local_i2v_single_noaudio_image_to_video(tmp_path):
     """单人无 audio (旁白/环境音镜): 仍走 ImageToVideo (不误入 ref2va)."""
     image = tmp_path / "kf.png"; image.write_bytes(b"PNG")

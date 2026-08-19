@@ -173,6 +173,9 @@ def main():
                     help="尾帧衔接: 单人无对白镜 (H3 ImageToVideo) 用上一镜输出尾帧作首帧")
     # 2026-08-15: H3 音频偶发乱码/重复 (seed 相关) → 换 seed 重跑修复
     ap.add_argument("--seed", type=int, default=None, help="H3 采样 seed (默认 42, 换值避重复/乱码)")
+    # 2026-08-19 R2V A/B: 单人对话镜双参考 [kf, 定妆照] (P1 构图 P2 身份)
+    ap.add_argument("--identity-ref", default=None,
+                    help="角色定妆照路径 (单人对话镜 refs=[kf,定妆照] 双参考; 默认主角 face_ref)")
     args = ap.parse_args()
 
     script = load_script(args.ep)
@@ -181,6 +184,12 @@ def main():
     out = args.out or os.path.join(MANJU, "output", f"ep{ep}_i2v_real", "_seedance")
     os.makedirs(out, exist_ok=True)
     no_face = {int(x) for x in (args.no_face_shots or "").split(",") if x.strip()}
+    # R2V A/B: identity_ref 默认取主角 face_ref (单人对话镜双参考); 显式传路径覆盖
+    ident_ref = args.identity_ref
+    if ident_ref is None:
+        _main = script["characters"].get("LINXIA") or next(
+            iter(script["characters"].values()), {})
+        ident_ref = (_main or {}).get("face_ref") or ""
 
     shots = [int(x) for x in (args.shots or ",".join(script["shots"].keys())).split(",")
              if x.strip()]
@@ -289,9 +298,15 @@ def main():
                                    voice=character(script, s)["voice_id"], speed=1.0)
                     _pad_audio_to_duration(tmp_voice, dur)   # 补静音到镜头时长
                     kw["audio"] = tmp_voice
+                    # R2V A/B (2026-08-19): identity_ref → refs=[kf,定妆照] 双参考,
+                    # prompt 用双参考变体 (P1 构图锚 / P2 身份锚, 脸跟 P2)
+                    if ident_ref and os.path.exists(ident_ref):
+                        kw["identity_ref"] = ident_ref
                     # 官方六段式 (默认): 覆盖外层 legacy prompt
                     if args.prompt_style == "official":
-                        prompt = h3prompt.build_dialog_prompt(script, s)
+                        prompt = (h3prompt.build_dialog_prompt_identity(script, s)
+                                  if kw.get("identity_ref")
+                                  else h3prompt.build_dialog_prompt(script, s))
                         if s not in no_face:
                             prompt += FACE_POS
                 elif args.prompt_style == "official":

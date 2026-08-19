@@ -1,5 +1,7 @@
-"""test_series_runner.py — parse_eps / run_series 多集批量编排核心单测."""
+"""test_series_runner.py — parse_eps / run_series 多集批量编排核心单测 + CLI 冒烟."""
 import json
+import os
+import tempfile
 
 import pytest
 
@@ -115,3 +117,22 @@ class TestRetryOnly:
 
     def test_latest_state_empty_dir(self, tmp_path):
         assert latest_state(str(tmp_path)) is None
+
+
+class TestCli:
+    def test_main_dry_run_registered_ep(self, capsys):
+        """--dry-run 单集已注册: 打印计划, exit 0, 不落状态文件."""
+        import scripts.run_series as rs
+        state_dir = os.path.join(tempfile.gettempdir(), "rs_smoke")
+        rc = rs.main(["--eps", "22", "--dry-run", "--state-dir", state_dir])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "ep22" in out and "RESULT" in out
+        assert not os.path.exists(state_dir) or not os.listdir(state_dir)  # dry-run 不落盘
+
+    def test_main_unregistered_exit_zero_with_skip(self, capsys):
+        """未注册集: 汇总 skipped, exit 0 (skipped 不算失败)."""
+        import scripts.run_series as rs
+        rc = rs.main(["--eps", "99", "--dry-run"])
+        assert rc == 0
+        assert "skipped" in capsys.readouterr().out

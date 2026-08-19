@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from lib.orchestrator import EP_SCRIPTS  # noqa: E402
 from lib.series_runner import (  # noqa: E402
     MANJU, failed_eps, latest_state, parse_eps, run_series)
+from lib.storyboard import load_script  # noqa: E402
 
 DEFAULT_STATE_DIR = os.path.join(MANJU, "output", "series_runs")
 
@@ -31,13 +32,23 @@ def _utf8_stdout() -> None:
 
 
 def _preflight(eps: list[str]) -> None:
-    """打印缺剧本的已注册集 (提示, 不禁跑)."""
-    missing = [ep for ep in eps
-               if ep in EP_SCRIPTS
-               and not os.path.exists(os.path.join(MANJU, "output", f"ep{ep}", "script.json"))]
+    """打印剧本加载不出的已注册集 (提示, 不禁跑).
+
+    与 load_script 三候选回退一致 (output JSON → scripts JSON → lib 模块):
+    直接 try load_script — 批量场景每集多读一次 JSON 可忽略, 免得 ep03
+    (scripts/ep03.json) / ep04 (lib.ep04_shots) 这类能正常加载的集被误报.
+    """
+    missing = []
+    for ep in eps:
+        if ep not in EP_SCRIPTS:
+            continue
+        try:
+            load_script(ep)
+        except Exception:
+            missing.append(ep)
     if missing:
-        print(f"[预检] ⚠ 以下集缺 output/ep{{N}}/script.json (会失败, 建议先 novel_to_series): "
-              + ",".join(missing), flush=True)
+        print(f"[预检] ⚠ 以下集剧本加载失败 (三候选 output/scripts/lib 均无, "
+              f"建议先 novel_to_series): " + ",".join(missing), flush=True)
 
 
 def main(argv=None) -> int:

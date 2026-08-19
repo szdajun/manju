@@ -71,6 +71,27 @@ EP_SCRIPTS = {
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
+    "23": {   # 2026-08-19 多集真跑 (novel_to_series 产, 继承 ep22 资产+声线)
+        "kf": "gen_ep03_real_batch.py",
+        "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
+        "voice": "voice_ep03.py",
+        "assemble": "make_ep03_real.py",
+    },
+    "24": {   # 2026-08-19 多集真跑
+        "kf": "gen_ep03_real_batch.py",
+        "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
+        "voice": "voice_ep03.py",
+        "assemble": "make_ep03_real.py",
+    },
+    "25": {   # 2026-08-19 多集真跑
+        "kf": "gen_ep03_real_batch.py",
+        "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
+        "voice": "voice_ep03.py",
+        "assemble": "make_ep03_real.py",
+    },
 }
 
 

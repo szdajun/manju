@@ -174,8 +174,11 @@ def main():
     # 2026-08-15: H3 音频偶发乱码/重复 (seed 相关) → 换 seed 重跑修复
     ap.add_argument("--seed", type=int, default=None, help="H3 采样 seed (默认 42, 换值避重复/乱码)")
     # 2026-08-19 R2V A/B: 单人对话镜双参考 [kf, 定妆照] (P1 构图 P2 身份)
+    # ⚠ A/B 已判死 (脸漂移+幻觉道具, 见 HANDOFF 2026-08-19 晚): 默认 None 走回原单参考,
+    #    想复测显式 --identity-ref <path> (未来 H3 官方 API 可再验).
     ap.add_argument("--identity-ref", default=None,
-                    help="角色定妆照路径 (单人对话镜 refs=[kf,定妆照] 双参考; 默认主角 face_ref)")
+                    help="角色定妆照路径 (单人对话镜 refs=[kf,定妆照] 双参考; "
+                         "R2V A/B 判死后默认关闭, 显式传路径才启用)")
     args = ap.parse_args()
 
     script = load_script(args.ep)
@@ -184,12 +187,7 @@ def main():
     out = args.out or os.path.join(MANJU, "output", f"ep{ep}_i2v_real", "_seedance")
     os.makedirs(out, exist_ok=True)
     no_face = {int(x) for x in (args.no_face_shots or "").split(",") if x.strip()}
-    # R2V A/B: identity_ref 默认取主角 face_ref (单人对话镜双参考); 显式传路径覆盖
-    ident_ref = args.identity_ref
-    if ident_ref is None:
-        _main = script["characters"].get("LINXIA") or next(
-            iter(script["characters"].values()), {})
-        ident_ref = (_main or {}).get("face_ref") or ""
+    ident_ref = args.identity_ref   # 默认不启用 (判死); 显式传路径才双参考
 
     shots = [int(x) for x in (args.shots or ",".join(script["shots"].keys())).split(",")
              if x.strip()]

@@ -274,3 +274,18 @@ def test_niuma_fewshot_loads():
     first = shots["1"]["line"]
     banned = ("我要做", "我要成为", "从今天开始")
     assert not any(b in first for b in banned), f"镜1 禁宣言式开场: {first}"
+
+
+def test_prompt_narrative_structure():
+    """prompt 含完播率叙事结构节 + 牛马梗引导 + 新 few-shot 指纹."""
+    p = build_prompt(subject="测试", title="测试", n_shots=5,
+                     style="s", neg="n", characters_spec=None)
+    # 叙事结构节
+    assert "冲突前置" in p
+    assert "追更钩" in p or "下集悬念" in p
+    assert "牛马" in p
+    # 台词趣味规范
+    assert "截图" in p or "发朋友" in p
+    # few-shot 已换血 (niuma 台词进 prompt, 老版宣言台词已出)
+    assert "KPI" in p
+    assert "真正自律的人" not in p

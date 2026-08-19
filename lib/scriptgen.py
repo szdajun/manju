@@ -10,7 +10,7 @@ orchestrator 经 lib.storyboard.load_script 自动探测消费 (零改动).
   - ask_doubao 只支持单轮 user prompt → 任务+角色+few-shot+格式规范全塞一个字符串
   - LLM 只输出子集 title/duration_s/characters/shots; style/neg/eye_fix/ep 由 merge_script 注入
   - 角色指纹命门: 已知角色(带 fingerprint)逐字复用不得改服装; 新角色(只有 brief)让 LLM 展开
-  - few-shot: 嵌入 ep03 shot1 (最通用钩子镜, 含完整 3 句服装不变式)
+  - few-shot: 嵌入 ep03_niuma shot1 (牛马梗钩子镜, 含完整 3 句服装不变式)
   - 鲁棒解析: 去 ```json 围栏 → first{/last} → 尾逗号清洗 → json.loads → raw_decode 降级
 """
 from __future__ import annotations
@@ -54,14 +54,18 @@ VOICE_OPTIONS = [
 VOICE_DEFAULT = "female-shaonv"
 
 
-# ---- few-shot (从 scripts/ep03.json 读, 避免手抄漂移) ----
+# ---- few-shot (从 scripts/ep03_niuma.json 读, 避免手抄漂移) ----
 
 def _load_few_shot_shots(*shot_ids: int) -> dict:
-    """读 scripts/ep03.json 的角色指纹 + 指定 shot, 作 prompt few-shot 示例.
+    """读 scripts/ep03_niuma.json 的角色指纹 + 指定 shot, 作 prompt few-shot 示例.
+
+    ⚠ ep03_niuma.json 仅是 few-shot 素材, 不是可跑剧本 — 缺 style/neg/voice_id,
+    不满足 load_json_script/validate 的完整 schema, 勿喂 orchestrator.
+    素材 5 镜全 dialog (无 voiceover 镜), prompt 只让它演示结构与趣味.
 
     只取 fingerprint + shots, 不带 name/face_ref/body_ref/lora (贴近 LLM 输出子集).
     """
-    path = os.path.join(MANJU, "scripts", "ep03.json")
+    path = os.path.join(MANJU, "scripts", "ep03_niuma.json")
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     out = {"characters": {}, "shots": {}}
@@ -113,7 +117,8 @@ neg: {neg}
 
 【字段规范】
 
-1. title: 中文, 8-14 字, 幽默/生活化, 概括本集核心冲突或反转。
+1. title: 中文, 8-14 字, 钩子式 — 制造好奇缺口 (如"加班三年，我第一次准点下班"),
+   禁止平铺描述式标题 (如"林夏健身遇猛男教练")。
 
 2. characters: 每个角色一条
    - 角色KEY 用大写拉丁字母(如 LINXIA)。
@@ -129,7 +134,15 @@ neg: {neg}
    - voice_id 从 ["female-shaonv"(少女活泼), "female-chengshu"(成熟), "female-wenrou"(温柔), "male-qn-qingse"(青年男)] 选一个。
 
 3. shots: 恰好 {n_shots} 个镜头, key 从 "1" 到 "{n_shots}"。
-   叙事弧: 钩子(开场抓眼) → 起势(展开) → 转折(小波折) → 反转(幽默反差) → 收尾(金句/约定)。
+   叙事结构 (竖屏短剧完播率规则, 必须遵守):
+   - 镜1 (钩子): 冲突前置。开场即反差画面 + 悬念台词, 3 秒内让观众想知道"接下来怎样"。
+     禁止: 宣言式开场("我要做XX的人"), 问候式开场, 环境铺陈开场。
+   - 镜2-3 (展开+梗位): 每镜至少一个留人点 — 牛马自嘲梗 / 反差 / 误会 / 吐槽。
+     梗从打工生活取材: 加班/周报/领导语录/KPI/工资条/通勤/出租屋/同事/老板画饼。
+     健身是壳: 梗必须挂在举铁/跑步机/教练等健身场景上, 不脱离画面。
+   - 镜4 (转折): 期望违背, 情绪反转 (惨→爽 / 爽→更惨)。
+   - 镜5 (追更钩): 下集悬念, 悬念必须具体 ("明天教练要带我练腿"), 让观众想看下一集。
+     禁止: 鸡汤总结, "加油/坚持/明天会更好"式台词。
    每镜四字段:
    - shot (英文关键帧 prompt, 描述性静态场景), 必须:
      a) 以景别开头, **优先全身/大半身 (性感健身内容要秀身材, 2026-08-07 用户拍板)**: full body shot / medium full shot / three-quarter body shot 为主, 少用 medium close-up, 尽量不用 close-up (近景看不到身材);
@@ -138,6 +151,8 @@ neg: {neg}
      d) 含角色当前动作姿态 + 表情;
      e) 含灯光(如 "bright overhead gym lighting") + 构图(如 "vertical composition") + 情绪 mood(如 "modern fitness atmosphere")。
    - line (中文台词): 12-25 字, 短句, 口语化, 幽默/生活化, 与镜内容强关联, 适合配音。
+     趣味标准: 台词要"让人想截图/发朋友"。优先自嘲式比喻("这杠铃比我的KPI还重")、
+     职场黑话错位("深蹲算不算向下管理")、反差吐槽; 禁止正经鼓励/教学腔/舔狗文学。
      ⚠ **语法必须完整** (主谓宾齐全, 如 "你比很多人先迈出第一步" 而非 "你比很多人第一步了");
      ⚠ **单句单意** (一个陈述/一句问候, 不要两个分句挤一句 — H3 音频会重复后半句);
      ⚠ 不要括注/内心标注 (内心独白用 voiceover 另写)。
@@ -167,7 +182,7 @@ neg: {neg}
 【角色设定(用户给定, 必须遵守)】
 {character_instructions}
 
-【格式示例(参考已上线 ep03《装备先到位》, 严格模仿其结构; 这是唯一格式参考)】
+【格式示例(参考牛马梗黄金结构 ep03_niuma《加班三年，我第一次准点下班》, 严格模仿其结构与趣味; 这是唯一格式参考)】
 {few_shot}
 """
 

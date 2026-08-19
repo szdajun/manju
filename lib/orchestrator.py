@@ -314,6 +314,7 @@ def run_plan(plan: list[StagePlan], *, dry_run: bool = False,
     print("一键出片计划")
     print("=" * 60)
     n_ok = 0
+    first_fail_rc = 0
     for p in plan:
         done = len([s for s in p.todo_shots]) if p.todo_shots else 0
         label = f"[{p.stage:<8}]"
@@ -331,10 +332,13 @@ def run_plan(plan: list[StagePlan], *, dry_run: bool = False,
             if not continue_on_error:
                 print(f"RESULT: 失败于 {p.stage} (--continue-on-error 可跳过)")
                 return r.returncode
+            first_fail_rc = first_fail_rc or r.returncode   # 记住首个失败码, 最后仍要报
         else:
             n_ok += 1
             print(f"        [OK] {p.output}")
     print("-" * 60)
     print(f"RESULT: {n_ok}/{len(plan)} 阶段 OK"
           + (" (dry-run, 未执行)" if dry_run else ""))
-    return 0
+    # ⚠ 2026-08-19 真跑教训: continue_on_error 下有阶段失败时返回 0 是假 ok —
+    #    series_runner 会把该集标 ok (成片缺失)。首个失败码必须传导。
+    return first_fail_rc

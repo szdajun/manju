@@ -159,7 +159,11 @@ def test_run_plan_fail_fast(ep03):
 
 
 def test_run_plan_continue_on_error(ep03):
-    """continue_on_error=True → 失败继续, 但返回非 0 标志."""
+    """continue_on_error=True → 失败继续, 且返回首个失败码 (2026-08-19 修复: 假 ok).
+
+    真跑教训: ComfyUI 中途挂 → i2v/verify/assemble 失败但返回 0 →
+    series_runner 把该集标 ok, 汇总 3✅ 但成片 0 个.
+    """
     plan = build_plan(ep03, ep="03", force=True)
 
     def _fake_run(*a, **kw):
@@ -167,7 +171,19 @@ def test_run_plan_continue_on_error(ep03):
 
     with patch("lib.orchestrator.subprocess.run", side_effect=_fake_run):
         code = run_plan(plan, dry_run=False, continue_on_error=True)
-    assert code == 0  # 全失败但 continue → 0? (见 run_plan: n_ok<len 但返回0)
+    assert code != 0  # 有阶段失败必须传导, 不许假 ok
+
+
+def test_run_plan_continue_on_error_all_ok(ep03):
+    """continue_on_error=True 且全阶段成功 → 0 (旗标不影响健康路径)."""
+    plan = build_plan(ep03, ep="03", force=True)
+
+    def _fake_run(*a, **kw):
+        return type("R", (), {"returncode": 0})()
+
+    with patch("lib.orchestrator.subprocess.run", side_effect=_fake_run):
+        code = run_plan(plan, dry_run=False, continue_on_error=True)
+    assert code == 0
 
 
 def test_default_out_dirs():

@@ -42,8 +42,8 @@ STYLES = {
     },
 }
 
-# 可选声线白名单 (prompt 里让 LLM 只从这里选; merge 对值原样透传 — 仅空值才补 VOICE_DEFAULT,
-# ⚠ 非法值不校验不告警, 会直达下游 TTS 报 2054; 白名单校验是遗留待办)
+# 可选声线白名单 (prompt 让 LLM 只从这里选; merge_script 校验 — 白名单外值 print 告警并回退
+# VOICE_DEFAULT, 防非法值直达下游 TTS 报 2054; 2026-08-19 终审跟进落地, 原"原样透传"行为已改)
 # ⚠ 2026-08-07 修: "male-qingnian" 不是有效 MiniMax 声线 (TTS 2054 voice id not exist),
 #   正确男声 = "male-qn-qingse" (lib/tts.py 默认).
 VOICE_OPTIONS = [
@@ -53,6 +53,21 @@ VOICE_OPTIONS = [
     "male-qn-qingse",   # 青年男声 (MiniMax 有效 ID)
 ]
 VOICE_DEFAULT = "female-shaonv"
+
+
+def _sanitize_voice_id(key: str, value: str | None, default: str) -> str:
+    """voice_id 白名单校验: 非法值 print 告警 (含原值/回退值) 并回退 default.
+
+    背景 (2026-08-19 Task3 r3): LLM 偶发拼错 (如 "female-shaonun"), 旧逻辑原样透传,
+    直到下游 MiniMax TTS 才报 2054 (voice id not exist), 排障链路长。
+    注意: char_overrides (上游代码/配置给定) 与 LLM 输出走同一校验, 口径一致。
+    """
+    v = str(value or default)
+    if v not in VOICE_OPTIONS:
+        print(f"[scriptgen] ⚠ 角色 {key} voice_id {v!r} 不在白名单 "
+              f"{VOICE_OPTIONS}, 回退 {default!r} (防 TTS 2054)")
+        return default
+    return v
 
 
 # ---- few-shot (从 scripts/ep03_niuma.json 读, 避免手抄漂移) ----
@@ -149,6 +164,9 @@ neg: {neg}
    - 镜4 (转折): 期望违背, 情绪反转 (惨→爽 / 爽→更惨)。
    - 镜5 (追更钩): 下集悬念, 悬念必须具体 ("明天教练要带我练腿"), 让观众想看下一集。
      禁止: 鸡汤总结, "加油/坚持/明天会更好"式台词。
+     每集结尾固定喊本剧 sign-off "牛马，明天见。" (紧跟悬念句后, 形成品牌记忆点), 不得改写。
+     ⚠ 例外说明: few-shot 镜5 未含 sign-off, 属于少数省略场合 — 新产剧本镜5 必须带 (sign-off
+     是本剧固定收尾词, 不计入"照抄示例"查重线, 固定句不算抄袭)。
    每镜四字段:
    - shot (英文关键帧 prompt, 描述性静态场景), 必须:
      a) 以景别开头, **优先全身/大半身 (性感健身内容要秀身材, 2026-08-07 用户拍板)**: full body shot / medium full shot / three-quarter body shot 为主, 少用 medium close-up, 尽量不用 close-up (近景看不到身材);
@@ -312,7 +330,10 @@ def merge_script(
             "fingerprint": fingerprint,
             "face_ref": overrides.get("face_ref"),
             "body_ref": overrides.get("body_ref"),
-            "voice_id": overrides.get("voice_id") or str(ch.get("voice_id") or voice_default),
+            "voice_id": _sanitize_voice_id(
+                new_key,
+                overrides.get("voice_id") or ch.get("voice_id"),
+                voice_default),
             "lora": None,
         }
 

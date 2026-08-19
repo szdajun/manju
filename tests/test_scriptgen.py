@@ -4,6 +4,8 @@
   parse_llm_json 鲁棒性 / build_prompt 结构 / merge_script 补全 /
   gen_script 主入口 (注入 fake ask) / orchestrator 衔接 (load_script 自动探测).
 """
+import contextlib
+import io
 import json
 import os
 import sys
@@ -11,7 +13,8 @@ import sys
 import pytest
 
 from lib.scriptgen import (
-    STYLES, build_prompt, gen_script, merge_script, parse_llm_json,
+    STYLES, VOICE_DEFAULT, VOICE_OPTIONS,
+    build_prompt, gen_script, merge_script, parse_llm_json,
 )
 from lib.storyboard import MANJU, load_json_script, load_script, validate
 
@@ -153,6 +156,45 @@ def test_merge_key_canonical():
     s = merge_script(subset, ep="04", style="st", neg="ng")
     assert "LINXIA" in s["characters"]
     assert s["shots"]["1"]["speaker"] == "LINXIA"
+
+
+def test_merge_voice_id_whitelist_fallback():
+    """merge 对白名单外的 voice_id 告警并回退 VOICE_DEFAULT (防 2054 直达 TTS)."""
+    subset = _llm_subset(1)
+    subset["characters"]["LINXIA"]["voice_id"] = "female-shaonun"  # r3 真跑拼错值
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        s = merge_script(subset, ep="04", style="st", neg="ng")
+    assert s["characters"]["LINXIA"]["voice_id"] == VOICE_DEFAULT
+    out = buf.getvalue()
+    assert "female-shaonun" in out          # 告警含原值
+    assert VOICE_DEFAULT in out             # 告警含回退值
+
+
+def test_merge_voice_id_valid_passthrough():
+    """白名单内 voice_id 原样透传, 无告警; 空值缺省回退 VOICE_DEFAULT."""
+    subset = _llm_subset(1)
+    subset["characters"]["LINXIA"]["voice_id"] = "female-wenrou"
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        s = merge_script(subset, ep="04", style="st", neg="ng")
+    assert s["characters"]["LINXIA"]["voice_id"] == "female-wenrou"
+    assert "voice" not in buf.getvalue()
+
+    subset["characters"]["LINXIA"]["voice_id"] = ""   # 空值 → 默认, 无告警
+    with contextlib.redirect_stdout(buf):
+        s = merge_script(subset, ep="04", style="st", neg="ng")
+    assert s["characters"]["LINXIA"]["voice_id"] == VOICE_DEFAULT
+    assert "female-shaonun" not in buf.getvalue()
+
+
+def test_prompt_shot5_sign_off():
+    """镜5 指令含固定 sign-off (spec 拍板), 且与 few-shot 省略场合的说明共存."""
+    p = build_prompt(subject="测试", title="测试", n_shots=5,
+                     style="s", neg="n", characters_spec=None)
+    assert "牛马，明天见。" in p
+    assert "sign-off" in p or "收尾词" in p
+    assert "不得改写" in p
 
 
 def test_merge_n_shots_mismatch_raises():

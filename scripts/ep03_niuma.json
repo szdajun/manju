@@ -1,0 +1,47 @@
+{
+  "ep": "03n",
+  "title": "加班三年，我第一次准点下班",
+  "duration_s": 5,
+  "characters": {
+    "LINXIA": {
+      "fingerprint": "1girl, solo, Linxia (林夏), a slim-fit 26-30 year-old Chinese woman, black hair in a high ponytail, wearing a misty-blue long-sleeve athletic top with a small white arc logo on the left chest, black high-waist athletic pants with a thin gray side stripe down the leg, white running shoes, natural makeup, bright energetic eyes, friendly confident expression, modern athletic wear, gym setting"
+    }
+  },
+  "shots": {
+    "1": {
+      "shot": "medium full shot, modern gym interior at evening, Linxia wearing misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants with gray side stripe, white running shoes, black hair in a high ponytail, still carrying her work backpack and holding a phone glowing with unread work messages, striding through the gym entrance with a dead-tense expression, bright overhead gym lighting, vertical composition, dramatic contrast mood",
+      "line": "加班到九点，健身房居然还剩半小时。",
+      "motion": "Linxia strides forward two steps then stops abruptly, glancing down at the buzzing phone in her hand, subtle step motion, tense weary expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "line_type": "dialog"
+    },
+    "2": {
+      "shot": "three-quarter body shot, Linxia in misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants, standing before a dumbbell rack, gripping a tiny pink dumbbell with both hands like handling a hot potato, coworkers' treadmills humming in the background, soft warm gym lighting, self-mocking comedic mood, vertical composition",
+      "line": "这杠铃的分量，跟我季度KPI一样离谱。",
+      "motion": "Linxia lifts the small dumbbell slowly with both hands, arms trembling exaggeratedly, then shoots a deadpan look at the camera, subtle lift motion, exaggerated strained expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "line_type": "dialog"
+    },
+    "3": {
+      "shot": "medium full shot, side angle, Linxia in misty-blue athletic top with white arc logo, black high-waist athletic pants, collapsed theatrically over the treadmill console like boneless, treadmill screen glowing, gym mirror reflecting her sprawled pose, even gym lighting, comedic despair mood, vertical composition",
+      "line": "跑个步而已，怎么比写周报还累。",
+      "motion": "She drags her feet on the slow-moving treadmill belt with heavy reluctant steps, shoulders slumping lower, subtle walking motion, exhausted self-mocking expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "line_type": "dialog"
+    },
+    "4": {
+      "shot": "medium shot, front-facing, Linxia in misty-blue long-sleeve athletic top with white arc logo, black high-waist athletic pants, standing up straight again and wiping sweat, chin lifted with sudden fire in her eyes, gym windows showing city night lights behind, warm rim lighting, triumphant underdog mood, vertical composition",
+      "line": "老板画的饼不管饱，撸铁管饱。",
+      "motion": "Linxia wipes her forehead with the back of her hand, then plants her fists on her hips and lifts her chin with a proud little nod, subtle posture change, fired-up satisfied expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "line_type": "dialog"
+    },
+    "5": {
+      "shot": "medium close-up, waist-up framing, Linxia in misty-blue athletic top with white arc logo on left chest, holding her phone up showing a gym schedule notification, eyebrows raised in comic horror, warm front lighting, bokeh gym background, cliffhanger comedic mood, face clearly visible",
+      "line": "明天教练要我深蹲一百个？救命。",
+      "motion": "She glances at her phone screen, eyes widening, then looks straight at the camera with a comedic helpless shrug, subtle head turn, comic horrified expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "line_type": "dialog"
+    }
+  }
+}

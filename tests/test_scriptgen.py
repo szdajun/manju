@@ -13,7 +13,7 @@ import pytest
 from lib.scriptgen import (
     STYLES, build_prompt, gen_script, merge_script, parse_llm_json,
 )
-from lib.storyboard import load_json_script, load_script, validate
+from lib.storyboard import MANJU, load_json_script, load_script, validate
 
 
 # ---- parse_llm_json 鲁棒性 ----
@@ -251,3 +251,26 @@ def test_run_ep_dry_run_consumes_llm_json(monkeypatch, tmp_path, capsys):
     assert exc.value.code == 0
     out = capsys.readouterr().out
     assert "ep04" in out or "04" in out
+
+
+# ---- 牛马梗版 few-shot 素材测试 ----
+
+def test_niuma_fewshot_loads():
+    """牛马梗 few-shot 素材: 文件存在, 5 镜齐, 每镜有四字段, 台词含牛马梗关键词."""
+    import json as _json
+    path = os.path.join(MANJU, "scripts", "ep03_niuma.json")
+    with open(path, encoding="utf-8") as f:
+        d = _json.load(f)
+    shots = d["shots"]
+    assert len(shots) == 5
+    niuma_words = ("KPI", "加班", "老板", "工资", "上班", "打工", "周报", "同事", "牛马", "领导")
+    all_lines = " ".join(s["line"] for s in shots.values())
+    assert any(w in all_lines for w in niuma_words), "台词必须含打工牛马元素"
+    for s in shots.values():
+        assert s.get("shot") and s.get("line") and s.get("motion") and s.get("speaker")
+        # 服装不变式三句 (与 ep03 指纹一致)
+        assert "misty-blue top stays misty-blue" in s["motion"]
+    # 镜1 冲突前置: 非宣言式开场
+    first = shots["1"]["line"]
+    banned = ("我要做", "我要成为", "从今天开始")
+    assert not any(b in first for b in banned), f"镜1 禁宣言式开场: {first}"

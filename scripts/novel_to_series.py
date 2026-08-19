@@ -66,14 +66,18 @@ def main():
     else:
         series_chars = {}
 
-    # 继承上集资产 (face_ref/body_ref): 同名系列角色复用, 免重复生成定妆图
+    # 继承上集资产 (face_ref/body_ref/voice_id): 同名系列角色复用, 免重复生成定妆图
+    # ⚠ voice_id 也继承 (2026-08-19 真跑发现): 系列角色提取只给 brief 不给 voice_id,
+    #    LLM 每集自选 → ep23 李教练曾漂成 female-shaonv (男教练女声). 继承后跨集声线锁定.
     asset_overrides = {}
     if args.char_assets:
         import json as _json
         src = _json.load(open(args.char_assets, encoding="utf-8"))
         for k, ch in src.get("characters", {}).items():
             if ch.get("face_ref"):
-                asset_overrides[k] = {"face_ref": ch["face_ref"], "body_ref": ch.get("body_ref")}
+                asset_overrides[k] = {"face_ref": ch["face_ref"],
+                                      "body_ref": ch.get("body_ref"),
+                                      "voice_id": ch.get("voice_id")}
         print(f"[char-assets] 继承 {len(asset_overrides)} 个角色资产", flush=True)
 
     # 3. 每集生成

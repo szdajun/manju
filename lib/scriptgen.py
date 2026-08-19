@@ -64,6 +64,10 @@ def _sanitize_voice_id(key: str, value: str | None, default: str) -> str:
     """
     v = str(value or default)
     if v not in VOICE_OPTIONS:
+        try:   # Windows GBK 控制台打不出 ⚠ → reconfigure 失败也不炸校验本身
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
         print(f"[scriptgen] ⚠ 角色 {key} voice_id {v!r} 不在白名单 "
               f"{VOICE_OPTIONS}, 回退 {default!r} (防 TTS 2054)")
         return default

@@ -345,8 +345,12 @@ def mux_seg_audio(seg_video, voice_mp3, dst, keep_orig_audio=False):
              "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
              "-shortest", dst])
     elif mode == "keep":
-        # H3 环境音/对话内嵌: 保留原音轨, 音画复制 (不叠 TTS)
-        run([FFMPEG, "-y", "-i", seg_video, "-c", "copy", dst])
+        # H3 环境音/对话内嵌: 保留原音轨 (不叠 TTS)。
+        # 2026-08-20 v2 自然度: 对话镜内嵌语音 vs 环境镜环境音响度差大,
+        # 轻压动态 (loudnorm 单遍 dynamic 模式) 拉平镜间音量跳变; -c copy 改重编码。
+        run([FFMPEG, "-y", "-i", seg_video,
+             "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+             "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", dst])
     else:  # silent
         dur = probe_dur(seg_video)
         run([FFMPEG, "-y", "-i", seg_video,
@@ -378,8 +382,9 @@ def concat_xfade_av(segs, durs, dst, xfade=XFADE, fps=FPS, ts=TIMESCALE,
         la = "aout" if i == n - 1 else f"af{i}"
         pv.append(f"[{prev_v}][{i}:v]xfade=transition={tr}:"
                   f"duration={xfade}:offset={offset}[{lv}]")
+        # 2026-08-20 v2: 曲线 tri→qsin — 三角淡入淡出机械感消除, 正弦缓入缓出自然
         pa.append(f"[{prev_a}][{i}:a]acrossfade=duration={xfade}"
-                  f":curve1=tri:curve2=tri[{la}]")
+                  f":curve1=qsin:curve2=qsin[{la}]")
         prev_v, prev_a = lv, la
     fc = ";".join(pv + pa)
     run([FFMPEG, "-y"] + inputs + ["-filter_complex", fc,

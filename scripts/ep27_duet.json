@@ -4,7 +4,7 @@
   "duration_s": 5,
   "characters": {
     "LINXIA": {
-      "fingerprint": "1girl, solo, Linxia (林夏), a slim-fit 26-30 year-old Chinese woman, black hair in a high ponytail, wearing a misty-blue long-sleeve athletic top with a small white arc logo on the left chest, black high-waist athletic pants with a thin gray side stripe down the leg, white running shoes, natural makeup, bright energetic eyes, friendly confident expression, modern athletic wear, gym setting",
+      "fingerprint": "1girl, solo, Linxia (林夏), a slim-fit 26-30 year-old Chinese woman with a slim waist and long slender legs, black hair in a high ponytail, wearing a misty-blue sports bra with a small white arc logo on the left chest, black high-waist glossy leggings with a thin gray side stripe down the leg showing her long legs, white running shoes, natural makeup, bright energetic eyes, friendly confident expression, modern athletic wear, gym setting",
       "voice_id": "female-shaonv"
     },
     "LICOACH": {
@@ -14,9 +14,9 @@
   },
   "shots": {
     "1": {
-      "shot": "medium full shot, modern gym interior at evening, Linxia wearing misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants, standing beside a squat rack holding a small red folder, her posture stiff like sitting at an office desk, bright overhead gym lighting, vertical composition, deadpan comedic mood",
+      "shot": "medium full shot, modern gym interior at evening, Linxia wearing misty-blue sports bra with white arc logo on left chest, black high-waist glossy leggings, her bare midriff and long legs visible, standing beside a squat rack holding a small red folder, her posture stiff like sitting at an office desk, bright overhead gym lighting, vertical composition, deadpan comedic mood",
       "line": "深蹲我在行，一天开会八小时练的。",
-      "motion": "Linxia squats down a few centimeters with exaggerated office-posture stiffness, then freezes mid-motion, subtle squat motion, proud deadpan expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "motion": "Linxia squats down a few centimeters with exaggerated office-posture stiffness, then freezes mid-motion, subtle squat motion, proud deadpan expression, the misty-blue sports bra stays misty-blue throughout, the black leggings stay black throughout, the white arc logo stays in the same position on the left chest",
       "speaker": "LINXIA",
       "line_type": "dialog"
     },
@@ -36,14 +36,14 @@
       "line_type": "ambient"
     },
     "4": {
-      "shot": "medium close shot, Linxia in misty-blue long-sleeve athletic top with white arc logo, standing frozen mid-squat beside the rack, mouth slightly open, eyes wide staring into the distance, one corner of her mouth twitching, gym mirror behind reflecting her frozen pose, bright overhead gym lighting, vertical composition, speechless comedic mood, face clearly visible",
+      "shot": "medium close shot, Linxia in misty-blue sports bra with white arc logo, standing frozen mid-squat beside the rack, mouth slightly open, eyes wide staring into the distance, one corner of her mouth twitching, gym mirror behind reflecting her frozen pose, bright overhead gym lighting, vertical composition, speechless comedic mood, face clearly visible",
       "line": "",
-      "motion": "Linxia stays frozen in the half-squat, her eye twitches once, then she slowly turns her head to look at the coach with a deadpan betrayed expression, subtle head turn motion, speechless wide-eyed expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "motion": "Linxia stays frozen in the half-squat, her eye twitches once, then she slowly turns her head to look at the coach with a deadpan betrayed expression, subtle head turn motion, speechless wide-eyed expression, the misty-blue sports bra stays misty-blue throughout, the black leggings stay black throughout, the white arc logo stays in the same position on the left chest",
       "speaker": "LINXIA",
       "line_type": "ambient"
     },
     "5": {
-      "shot": "medium full shot, two people facing each other beside the squat rack, Licoach in navy-blue athletic tank top with white whistle logo standing and speaking, Linxia in misty-blue athletic top with white arc logo standing listening with her mouth closed and arms slightly lifted in protest, both fully visible in frame, modern gym interior with mirrored wall in the background, bright overhead gym lighting, vertical composition, warm comedic mood",
+      "shot": "medium full shot, two people facing each other beside the squat rack, Licoach in navy-blue athletic tank top with white whistle logo standing and speaking, Linxia in misty-blue sports bra with white arc logo standing listening with her mouth closed and arms slightly lifted in protest, both fully visible in frame, modern gym interior with mirrored wall in the background, bright overhead gym lighting, vertical composition, warm comedic mood",
       "line": "腿比你先知道，明天休假的名单没你。",
       "motion": "Licoach points one finger at her legs then gently pats Linxia's shoulder once, subtle pointing and patting motion, warm encouraging expression while speaking, the navy-blue tank top stays navy-blue throughout, the black shorts stay black throughout, the white whistle logo stays in the same position on the chest",
       "speaker": "LICOACH",
@@ -51,9 +51,9 @@
       "line_type": "dialog"
     },
     "6": {
-      "shot": "medium full shot, Linxia in misty-blue long-sleeve athletic top with white arc logo on left chest, black high-waist athletic pants, dragging herself toward the gym exit while looking back over her shoulder at the squat rack, evening city lights visible through the gym windows, warm rim lighting, vertical composition, resigned comedic mood",
+      "shot": "medium full shot, Linxia in misty-blue sports bra with white arc logo on left chest, black high-waist glossy leggings, her bare midriff and long legs visible, dragging herself toward the gym exit while looking back over her shoulder at the squat rack, evening city lights visible through the gym windows, warm rim lighting, vertical composition, resigned comedic mood",
       "line": "腿已提交休假申请，牛马，明天见。",
-      "motion": "Linxia takes one heavy step toward the exit, then looks back over her shoulder with a comedic resigned pout, subtle stepping and head-turn motion, tired self-mocking expression, the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest",
+      "motion": "Linxia takes one heavy step toward the exit, then looks back over her shoulder with a comedic resigned pout, subtle stepping and head-turn motion, tired self-mocking expression, the misty-blue sports bra stays misty-blue throughout, the black leggings stay black throughout, the white arc logo stays in the same position on the left chest",
       "speaker": "LINXIA",
       "line_type": "dialog"
     }

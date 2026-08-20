@@ -109,9 +109,14 @@ def main():
             m.render_subtitle(clean_line(shot(script, s)["line"]), sub_png,
                               style=post["sub_style"])
             # 2026-08-20 节奏: 对白镜头尾垫呼吸 (H3 台词 0.2s 起说太抢);
-            # ambient 反应镜不垫 (本身就是缓冲位)
+            # ambient 反应镜不垫 (本身就是缓冲位)。
+            # v2 同日: 末镜尾呼吸 0.3→0.8 — sign-off 后定格余韵再黑, 不急刹车
             lt = shot(script, s).get("line_type") or "dialog"
-            breathe = (0.4, 0.3) if lt in ("dialog", "voiceover") else None
+            if lt in ("dialog", "voiceover"):
+                is_last = s == shots[-1]
+                breathe = (0.4, 0.8) if is_last else (0.4, 0.3)
+            else:
+                breathe = None
             print(f"=== shot {s:2d} i2v -> seg ===", flush=True)
             m.gen_seg_i2v(src, seg_v, sub_png, breathe=breathe)
         else:

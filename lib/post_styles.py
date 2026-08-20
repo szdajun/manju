@@ -50,9 +50,12 @@ TRANSITIONS: dict[str, str] = {
 # (上镜 line_type, 下镜 line_type) → 转场; 未命中兜底 fade
 # 2026-08-20 用户反馈"衔接太仓促": dialog→dialog 由 wipeleft 快擦改 fade 慢溶
 # (对白硬碰硬抢话感), 慢节奏配 XFADE 0.6 (make_ep03_real 默认)
+# 同日 v2: 对白进出环境镜 (ambient) 也慢溶 — 台词说完进缓冲位是"呼吸"节点
 TRANSITION_RULES: dict[tuple[str, str], str] = {
     ("dialog", "dialog"): "fade",
     ("dialog", "voiceover"): "circleopen",
+    ("dialog", "ambient"): "fade",
+    ("ambient", "dialog"): "fade",
     ("voiceover", "dialog"): "slideup",
 }
 

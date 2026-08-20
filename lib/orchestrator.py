@@ -106,6 +106,13 @@ EP_SCRIPTS = {
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
+    "28": {   # 2026-08-20 织体四律 6 镜首验 (缓冲空镜镜3) + 林夏 v2 性感装
+        "kf": "gen_ep03_real_batch.py",
+        "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
+        "voice": "voice_ep03.py",
+        "assemble": "make_ep03_real.py",
+    },
 }
 
 
@@ -266,6 +273,11 @@ def build_plan(script: dict, *, ep: str,
                     "--ep", ep_norm, "--shots", shots_arg,
                     "--kf-dir", dirs["kf"], "--out", out,
                     "--duration", str(duration_s)]
+            # ⚠ H3 正式档必须 --h3-turbo (memory h3-turbo-oom-and-expression):
+            #   非 turbo 20 步在 11.99GiB 上 OOM/卡死 (ep28 镜3 OOM 根因), turbo 8 步 ~10min/镜.
+            #   漏传是本 bug 根因 — 2026-08-20 ep28 补传, 全 ep 生效.
+            if os.environ.get("MANJU_VIDEOGEN", "seedance").lower() == "h3_local":
+                argv += ["--h3-turbo"]
         elif stage == "verify":
             # P0-2 质量门: i2v 后跑 check_i2v_face (fitness venv), 出报告到 i2v 目录.
             # 非阻塞: 报告漂移但不中断 (组装仍继续); --strict 时 exit 非 0 由 run_plan 判.

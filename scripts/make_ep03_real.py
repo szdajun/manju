@@ -101,7 +101,10 @@ def main():
             return 1
         # 2026-08-18 fix: tmp 缓存名带 sub_style — 否则同目录切风格重跑静默沿用旧字幕
         seg_v = os.path.join(tmp, f"seg{s:02d}_{post['sub_style']}.mp4")
-        if not os.path.exists(seg_v):
+        # 2026-08-20 fix: i2v 重生成后旧 seg 缓存必须失效 — 否则重组装静默沿用旧画面
+        # +旧音轨 (ep26 镜2 说话人修复被缓存吞掉, 用户二次反馈才抓到)
+        if (not os.path.exists(seg_v)
+                or os.path.getmtime(src) > os.path.getmtime(seg_v)):
             sub_png = os.path.join(tmp, f"sub{s:02d}_{post['sub_style']}.png")
             m.render_subtitle(clean_line(shot(script, s)["line"]), sub_png,
                               style=post["sub_style"])
@@ -112,7 +115,14 @@ def main():
         voice = os.path.join(voice_dir, f"voice_shot{s:02d}.mp3")
         dst_av = os.path.join(tmp, f"av{s:02d}_{post['sub_style']}.mp4")
         tag = os.path.basename(voice) if os.path.exists(voice) else "(silent)"
-        if not os.path.exists(dst_av):
+        # 同理: seg 或 voice 比旧 av 新 → 重 mux
+        _av_stale = False
+        if os.path.exists(dst_av):
+            if os.path.getmtime(seg_v) > os.path.getmtime(dst_av):
+                _av_stale = True
+            if os.path.exists(voice) and os.path.getmtime(voice) > os.path.getmtime(dst_av):
+                _av_stale = True
+        if not os.path.exists(dst_av) or _av_stale:
             print(f"  mux shot {s:2d}  {tag}")
             m.mux_seg_audio(seg_v, voice, dst_av)
         else:

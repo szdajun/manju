@@ -77,7 +77,7 @@ def _voice_gender(script: dict, sid: int | str) -> str:
     2026-08-20 ep26 镜2 教训: 双人镜教练说话, prompt 硬编码 female voice 与男声 TTS
     冲突 → H3 让女主对口型。声线措辞必须与 TTS 实际声线一致。
     """
-    vid = (character(script, sid).get("voice_id") or "").lower()
+    vid = ((character(script, sid) or {}).get("voice_id") or "").lower()
     return "male" if vid.startswith("male") else "female"
 
 
@@ -170,7 +170,7 @@ def _retention_audio_ref() -> str:
 def build_dialog_prompt(script: dict, sid: int | str) -> str:
     """单人对白 (有 TTS 音频, Ref2VA 单参考图 = 关键帧)."""
     sh = shot(script, sid)
-    fp = character(script, sid).get("fingerprint", "")
+    fp = (character(script, sid) or {}).get("fingerprint", "")
     scene = _capitalize(sh.get("shot", "").rstrip("."))
     motion = _ensure_period(sh.get("motion", ""))
     line = _clean_line(sh.get("line", ""))
@@ -218,7 +218,7 @@ def build_dialog_prompt_identity(script: dict, sid: int | str) -> str:
     其余 (音频链/台词/六段式) 与 build_dialog_prompt 一致.
     """
     sh = shot(script, sid)
-    fp = character(script, sid).get("fingerprint", "")
+    fp = (character(script, sid) or {}).get("fingerprint", "")
     scene = _capitalize(sh.get("shot", "").rstrip("."))
     motion = _ensure_period(sh.get("motion", ""))
     line = _clean_line(sh.get("line", ""))
@@ -253,7 +253,7 @@ N/A"""
 def build_voiceover_prompt(script: dict, sid: int | str) -> str:
     """单人旁白 (无音频; ⛔ 不写旁白字样, TTS 旁白由组装叠加)."""
     sh = shot(script, sid)
-    fp = character(script, sid).get("fingerprint", "")
+    fp = (character(script, sid) or {}).get("fingerprint", "")
     scene = _capitalize(sh.get("shot", "").rstrip("."))
     motion = _ensure_period(sh.get("motion", ""))
     subj = _subject_desc(fp, "<Picture 1>")
@@ -282,7 +282,7 @@ N/A"""
 def build_ambient_prompt(script: dict, sid: int | str) -> str:
     """单人环境音 (无音频; 沉默 + overall_soundscape)."""
     sh = shot(script, sid)
-    fp = character(script, sid).get("fingerprint", "")
+    fp = (character(script, sid) or {}).get("fingerprint", "")
     scene = _capitalize(sh.get("shot", "").rstrip("."))
     motion = _ensure_period(sh.get("motion", ""))
     subj = _subject_desc(fp, "<Picture 1>")

@@ -58,7 +58,7 @@ VOICEOVER_SILENT = (
 
 def _outfit_prefix(script: dict, sid: int | str) -> str:
     """对话镜服装前置: 从角色指纹取服装段 (加强跨镜服装一致, 治 H3 每镜重渲染漂移)."""
-    fp = character(script, sid).get("fingerprint") or ""
+    fp = (character(script, sid) or {}).get("fingerprint") or ""
     # 截取指纹里服装相关段: 从 "wearing" 或 上衣描述 起 (指纹规范含服装)
     outfit = fp
     for marker in ("wearing", "dressed in", "in a"):
@@ -239,16 +239,16 @@ def main():
                     kw["seed"] = args.seed
                 fc = frame_chars(script, s)
                 # 缓冲空镜 (织体第④律): frame_chars=[] → 无人纯场景, 无 ref 无 audio
-                if fc is not None and len(fc) == 0:
-                    if args.prompt_style == "official":
-                        prompt = h3prompt.build_buffer_prompt(script, s)
-                    else:
-                        prompt = h3prompt.build_ambient_prompt(script, s) + FACE_POS
+                # ⚠ is_buffer 哨兵: buffer prompt 设完后必须跳过下游 elif 链
+                #   (build_ambient/voiceover 会查 character() → None 崩, 2026-08-20 ep28 镜3)
+                is_buffer = fc is not None and len(fc) == 0
+                if is_buffer:
+                    prompt = h3prompt.build_buffer_prompt(script, s)
                     kw["mode"] = "single"
                 fc = [c for c in (fc or []) if c in script["characters"]
                       and (script["characters"][c].get("face_ref")
                            or script["characters"][c].get("body_ref"))]
-                if len(fc) >= 2:
+                if not is_buffer and len(fc) >= 2:
                     # ⭐ 双人同框 (2026-08-07 混合方案): Ref2VA 双角色同框.
                     # 对话镜带说话人音频, 无对话镜纯同框互动.
                     spk_k = speaker(script, s)
@@ -288,7 +288,7 @@ def main():
                         prompt = (_build_dual_scene_prompt(script, s)
                                   if args.prompt_style == "legacy"
                                   else h3prompt.build_dual_scene_prompt(script, s, kind=lt)) + FACE_POS
-                elif lt == LINE_TYPE_DIALOG:
+                elif not is_buffer and lt == LINE_TYPE_DIALOG:
                     # 单人对话镜: 台词 TTS → 喂 H3 驱动口型.
                     # ⚠ 落 i2v out 目录 (不进 voice_dir), 组装靠 has_voice 判路由时
                     #   对话镜 has_voice=False → 保留 H3 内嵌语音, 不重复叠 TTS.
@@ -314,7 +314,7 @@ def main():
                                   else h3prompt.build_dialog_prompt(script, s))
                         if s not in no_face:
                             prompt += FACE_POS
-                elif args.prompt_style == "official":
+                elif not is_buffer and args.prompt_style == "official":
                     # 单人 voiceover/ambient (h3): 官方六段式沉默 prompt (⛔ 不写旁白字样)
                     prompt = (h3prompt.build_voiceover_prompt(script, s)
                               if lt == LINE_TYPE_VOICEOVER

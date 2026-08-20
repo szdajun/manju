@@ -277,3 +277,43 @@ def test_strip_tags_strips_leading_tags_and_name():
 def test_style_sentence_default_and_override():
     assert "fitness-short style" in h3prompt._style_sentence()
     assert "custom style" in h3prompt._style_sentence({"style_sentence": "custom style."})
+
+
+# ---- 缓冲空镜 (织体第④律 2026-08-20) ----
+
+def _buffer_script():
+    """镜3 = 缓冲空镜: frame_chars=[] + speaker='' (无角色, 无人)."""
+    return {
+        "title": "t", "duration_s": 5,
+        "characters": {"LINXIA": _CHARS["LINXIA"]},
+        "shots": {
+            "3": {"shot": "close-up of gym door card scanner",
+                  "line": "", "motion": "screen blinks red",
+                  "speaker": "", "frame_chars": [], "line_type": "ambient"},
+        },
+    }
+
+
+def test_buffer_prompt_no_character_crash():
+    """缓冲空镜: 无人镜调 build_buffer_prompt 不崩 (character() 返回 None)."""
+    prompt = h3prompt.build_buffer_prompt(_buffer_script(), 3)
+    assert "no characters" in prompt or "no people" in prompt
+
+
+def test_buffer_prompt_has_soundscape_no_subject():
+    """缓冲空镜: 六段式里无 <Subject>, 保留 overall_soundscape."""
+    prompt = h3prompt.build_buffer_prompt(_buffer_script(), 3)
+    assert "<Subject" not in prompt
+    assert "overall_soundscape:" in prompt
+
+
+def test_character_none_contract_all_builders_tolerate():
+    """character() → None 契约: 所有单人 builder 对缓冲空镜不崩 (容错 or {})."""
+    script = _buffer_script()
+    # 直接喂 speaker='' 的缓冲镜给各 builder — 必须返回字符串, 不得抛 NoneType
+    for builder in (h3prompt.build_dialog_prompt,
+                    h3prompt.build_dialog_prompt_identity,
+                    h3prompt.build_voiceover_prompt,
+                    h3prompt.build_ambient_prompt):
+        out = builder(script, 3)
+        assert isinstance(out, str) and out.strip()

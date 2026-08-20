@@ -151,7 +151,7 @@ neg: {neg}
      b) 含姓名: 拉丁名(拼音) + 括号中文名, 如 "Linxia (林夏)";
      c) 含年龄体型, 如 "a slim-fit 26-30 year-old Chinese woman";
      d) 含发型, 如 "black hair in a high ponytail";
-     e) 含完整服装: 上衣(颜色+款式+可辨识标志, 如 "misty-blue long-sleeve athletic top with a small white arc logo on the left chest") + 下装(颜色+款式+细节) + 鞋;
+     e) 含完整服装: 上衣(颜色+款式+可辨识标志, 如 "misty-blue sports bra with a small white arc logo on the left chest") + 下装(颜色+款式+细节, 如 "black high-waist glossy leggings") + 鞋;
      f) 含妆容/气质/表情, 如 "natural makeup, bright energetic eyes, friendly confident expression";
      g) 含场景标签, 如 "modern athletic wear, gym setting"。
    服装是角色一致性的命门: 颜色/款式/标志必须具体, 且每个 shot 都要重复引用。
@@ -213,7 +213,7 @@ neg: {neg}
      b) 含表情变化(如 "satisfied smirk gradually forming");
      c) 句尾必带 3 句服装不变式, 颜色/标志必须与 fingerprint 完全一致:
         "the {{上衣颜色}} top stays {{颜色}} throughout, the {{裤色}} pants stay {{颜色}} throughout, the {{标志}} stays in the same position on the left chest"
-      不变式示例: "the misty-blue top stays misty-blue throughout, the black pants stay black throughout, the white arc logo stays in the same position on the left chest"。
+      不变式示例: "the misty-blue sports bra stays misty-blue throughout, the black leggings stay black throughout, the white arc logo stays in the same position on the left chest"。
    - speaker: 该镜说话的角色KEY。
    - line_type (可选, 三选一, 缺省= "dialog"):
        "dialog"    角色面向镜头说台词, 唇型由台词音频驱动 (默认, 有 line 的镜都是);

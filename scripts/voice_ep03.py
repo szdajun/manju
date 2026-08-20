@@ -64,15 +64,18 @@ def main():
     results = []
     for s in shots:
         line = clean_line(shot(script, s)["line"])  # 剥"（内心：）"壳, 防 TTS 念出
-        voice_id = character(script, s)["voice_id"]
-        out = os.path.join(out_dir, f"voice_shot{s:02d}.mp3")
-        # 端到端整合 (2026-08-06): 只生成组装阶段需要的 TTS.
-        #   - 无台词 (ambient) → 不需要 TTS
-        #   - H3 对话镜 → 语音已内嵌 H3 视频 (i2v 阶段喂 audio 驱动口型), 不重复生成
+        # 缓冲/反应镜 (空 line): 无 TTS 可做 — 先判空再取 voice_id
+        # (2026-08-20 织体第④律: 缓冲镜 speaker="" → character() None,
+        #  旧顺序 None["voice_id"] 直接 TypeError)
         if not (line or "").strip():
             print(f"{s:>4}  SKIP (无台词 ambient)")
             results.append((s, "SKIP"))
             continue
+        voice_id = character(script, s)["voice_id"]
+        out = os.path.join(out_dir, f"voice_shot{s:02d}.mp3")
+        # 端到端整合 (2026-08-06): 只生成组装阶段需要的 TTS.
+        #   - 无台词 (ambient) → 不需要 TTS (上方已判空 SKIP)
+        #   - H3 对话镜 → 语音已内嵌 H3 视频 (i2v 阶段喂 audio 驱动口型), 不重复生成
         if VIDEO_PROVIDER == "h3_local" and line_type(script, s) == LINE_TYPE_DIALOG:
             # H3 对话镜: 语音已内嵌 H3. 清掉陈旧 voice 文件 (可能是之前 seedance
             # 跑法留下的) — 否则组装 has_voice=T × has_orig=T → 误走 mix 双叠音.

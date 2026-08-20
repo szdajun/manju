@@ -230,9 +230,14 @@ def speaker(script: dict, sid: int | str) -> str:
     return shot(script, sid)["speaker"]
 
 
-def character(script: dict, sid: int | str) -> dict:
-    """sid 对应镜的说话人角色条目 (fingerprint/face_ref/body_ref/voice_id/lora)."""
-    return script["characters"][speaker(script, sid)]
+def character(script: dict, sid: int | str) -> dict | None:
+    """sid 对应镜的说话人角色条目 (fingerprint/face_ref/body_ref/voice_id/lora).
+
+    缓冲空镜 (2026-08-20 织体第④律) speaker="" → 返回 None (无角色),
+    调用方需判空 (voice/指纹/kf ref 等角色相关环节跳过)。
+    """
+    spk = speaker(script, sid)
+    return script["characters"].get(spk) if spk else None
 
 
 def frame_chars(script: dict, sid: int | str) -> list[str] | None:

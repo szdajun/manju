@@ -43,6 +43,10 @@ def build_positive(shot_id, script, extra=""):
     """
     ch = character(script, shot_id)
     sh = shot(script, shot_id)
+    # 缓冲空镜 (frame_chars=[]): 无指纹 — 纯场景+画风+运动 (无人, 不锁角色)
+    if ch is None:
+        return (f"{sh['shot']}, {script['style']}"
+                + (f", {extra}" if extra else "") + f", {sh['motion']}")
     return (f"{ch['fingerprint']}, {sh['shot']}, {script['style']}"
             + (f", {extra}" if extra else "") + f", {sh['motion']}")
 

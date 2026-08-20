@@ -214,6 +214,14 @@ neg: {neg}
      c) 句尾必带 3 句服装不变式, 颜色/标志必须与 fingerprint 完全一致:
         "the {{上衣颜色}} top stays {{颜色}} throughout, the {{裤色}} pants stay {{颜色}} throughout, the {{标志}} stays in the same position on the left chest"
       不变式示例: "the misty-blue sports bra stays misty-blue throughout, the black leggings stay black throughout, the white arc logo stays in the same position on the left chest"。
+     ⚠ **训练镜强制规则 (题材含力量训练时, 本集必须遵守)**: 至少 4 镜的 motion 必须把**真实训练动作**写成
+       动作主体 — deep squat 深蹲 / deadlift 硬拉 / overhead barbell press 杠铃推举 / barbell curl 弯举 /
+       dumbbell row 划船 / walking lunge 箭步蹲 / bench press 卧推 任选。motion 的主语是"正在练"的动作,
+       不是"站着说话/只比划手势"; 动作必须写进 motion 主谓, 不能只出现在 shot 背景里。
+       训练镜 motion 示例: "Linxia does a deep squat holding the barbell on her shoulders, back straight,
+       knees tracking over toes, hips sinking below parallel, a strained comedic grin, subtle squat motion,
+       the misty-blue sports bra stays misty-blue throughout, the black leggings stay black throughout,
+       the white arc logo stays in the same position on the left chest"。
    - speaker: 该镜说话的角色KEY。
    - line_type (可选, 三选一, 缺省= "dialog"):
        "dialog"    角色面向镜头说台词, 唇型由台词音频驱动 (默认, 有 line 的镜都是);

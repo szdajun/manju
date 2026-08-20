@@ -92,6 +92,13 @@ EP_SCRIPTS = {
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
+    "26": {   # 2026-08-20 《牛来》热梗特辑 (烂片翻身×绊倒体×牛马健身)
+        "kf": "gen_ep03_real_batch.py",
+        "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
+        "voice": "voice_ep03.py",
+        "assemble": "make_ep03_real.py",
+    },
 }
 
 

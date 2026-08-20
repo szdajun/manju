@@ -12,6 +12,8 @@ _CHARS = {
                "voice_id": "female-shaonv"},
     "client_k": {"fingerprint": "1girl, solo, client_k, red dress",
              "voice_id": "female-wenrou"},
+    "LICOACH": {"fingerprint": "1boy, solo, Licoach, a muscular 28-35 year-old Chinese man",
+                "voice_id": "male-qn-qingse"},
 }
 
 
@@ -145,6 +147,69 @@ def test_dual_scene_both_silent():
     assert "<Audio 1>" not in p
     assert "rhythmic footsteps" in p
     assert "<d>" not in p
+
+
+# ---- 声线性别自适应 (2026-08-20 ep26 镜2 教训) ----
+# 男教练说话时 prompt 硬编码 "female voice"/"female vocal layer" 与男声 TTS 冲突
+# → H3 把嘴型安到女主脸上 (视觉说话人错位)。声线措辞必须跟着 voice_id 走。
+
+def _male_single_script():
+    return {
+        "title": "t", "duration_s": 5,
+        "characters": {"LICOACH": _CHARS["LICOACH"]},
+        "shots": {
+            "1": {"shot": "medium shot, gym floor", "line": "第一次都这样",
+                  "motion": "coach gestures calmly", "speaker": "LICOACH"},
+        },
+    }
+
+
+def _male_dual_script():
+    """双人镜, 教练说话 / 林夏倾听 (ep26 镜2 同构)."""
+    return {
+        "title": "t", "duration_s": 5,
+        "characters": {"LINXIA": _CHARS["LINXIA"], "LICOACH": _CHARS["LICOACH"]},
+        "shots": {
+            "1": {"shot": "two people facing each other", "line": "你已经比很多人先迈出第一步了",
+                  "motion": "coach pats the rack", "speaker": "LICOACH",
+                  "frame_chars": ["LINXIA", "LICOACH"]},
+        },
+    }
+
+
+def test_dialog_male_speaker_male_wording():
+    p = h3prompt.build_dialog_prompt(_male_single_script(), 1)
+    assert "adult male voice" in p              # 声线措辞 = male
+    assert "female voice" not in p
+    assert "male vocal layer" in p              # Audio 1 描述同步
+    assert "female vocal layer" not in p
+    assert "His lips move" in p                 # 代词跟随
+
+
+def test_dialog_female_speaker_wording_unchanged():
+    p = h3prompt.build_dialog_prompt(_single_script(), 1)   # LINXIA female-shaonv
+    assert "youthful female voice" in p
+    assert "female vocal layer" in p
+    assert "Her lips move" in p
+    assert "adult male voice" not in p       # 精确断言 (female 含 male 子串, 不能反着查)
+
+
+def test_dual_dialog_male_speaker_male_wording():
+    """ep26 镜2 病灶: 教练说话 → Subject 2 声线必须是 male, 倾听者 (女主) 闭嘴."""
+    p = h3prompt.build_dual_dialog_prompt(_male_dual_script(), 1)
+    assert "<Subject 2> is the person in <Picture 2>, a muscular 28-35" in p  # 教练=说话者
+    assert "adult male voice" in p
+    assert "male vocal layer" in p
+    assert "female vocal layer" not in p       # 病灶断言: 不再硬编码女声
+    assert "His lips move" in p
+    assert "mouth closed throughout" in p      # 倾听者仍闭嘴
+
+
+def test_dual_dialog_female_speaker_wording_unchanged():
+    p = h3prompt.build_dual_dialog_prompt(_dual_script(), 1)  # LINXIA 说话
+    assert "youthful female voice" in p
+    assert "female vocal layer" in p
+    assert "Her lips move" in p
 
 
 def test_dual_dialog_kind_voiceover_soundscape():

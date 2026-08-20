@@ -33,11 +33,20 @@ _SOUNDSCAPES = {
                 "rustle of athletic wear, continuing throughout the video."),
 }
 
-# 说话/闭嘴 常用子句 (保持统一)
-_SPEECH_CLAUSE = ("<Subject 1> (S1) says in a clear, natural youthful female voice, "
+# 说话子句 (声线措辞按说话者 voice_id 性别自适应, 2026-08-20 ep26 镜2 教训:
+# 男教练说话时 prompt 写 "female voice" 而音频是男声 → H3 把嘴型安到女主脸上)
+_SPEECH_VOICE_DESC = {
+    "female": "a clear, natural youthful female voice",
+    "male": "a clear, natural adult male voice",
+}
+_SPEECH_CLAUSE = ("<Subject 1> (S1) says in {voice_desc}, "
                   "<d>[中文]{line}</d> Her lips move in sync with the Mandarin line and "
                   "close naturally after speaking, keeping an upright natural posture, "
                   "head facing the camera with a natural expression.")
+_SPEECH_CLAUSE_MALE = ("<Subject 1> (S1) says in {voice_desc}, "
+                       "<d>[中文]{line}</d> His lips move in sync with the Mandarin line and "
+                       "close naturally after speaking, keeping an upright natural posture, "
+                       "head facing the camera with a natural expression.")
 _SILENT_CLAUSE = ("<Subject 1> stays completely silent with mouth closed, does not speak "
                   "and has no speech, only natural subtle breathing and idle motion, "
                   "lips remaining closed.")
@@ -60,6 +69,24 @@ def _is_exertion_motion(motion: str) -> bool:
     """motion 含发力/喘气词 → True (沉默子句切发力版, 不压呼吸/嘴型)."""
     low = (motion or "").lower()
     return any(w in low for w in _EXERTION_WORDS)
+
+
+def _voice_gender(script: dict, sid: int | str) -> str:
+    """说话者声线性别: voice_id 前缀 male-/female- 判定, 未知默认 female (历史行为).
+
+    2026-08-20 ep26 镜2 教训: 双人镜教练说话, prompt 硬编码 female voice 与男声 TTS
+    冲突 → H3 让女主对口型。声线措辞必须与 TTS 实际声线一致。
+    """
+    vid = (character(script, sid).get("voice_id") or "").lower()
+    return "male" if vid.startswith("male") else "female"
+
+
+def _speech_clause(script: dict, sid: int | str) -> str:
+    """说话子句按说话者性别选措辞 (voice_desc + His/Her 代词)."""
+    gender = _voice_gender(script, sid)
+    clause = _SPEECH_CLAUSE_MALE if gender == "male" else _SPEECH_CLAUSE
+    return clause.format(voice_desc=_SPEECH_VOICE_DESC[gender],
+                         line=_clean_line(shot(script, sid).get("line", "")))
 
 
 # ============ helpers ============
@@ -149,9 +176,10 @@ def build_dialog_prompt(script: dict, sid: int | str) -> str:
     line = _clean_line(sh.get("line", ""))
     subj = _subject_desc(fp, "<Picture 1>")
     sound = _soundscape_for(script, sid, "dialog")
+    gender = _voice_gender(script, sid)
     return f"""subject_definitions:
 <Subject 1> is {subj}.
-<Audio 1> is the speech reference for <Subject 1> (S1), containing a spoken Mandarin female vocal layer.
+<Audio 1> is the speech reference for <Subject 1> (S1), containing a spoken Mandarin {gender} vocal layer.
 
 summary:
 [reference generation + audio reference] The target video shows <Subject 1> in the described gym scene, performing the described motion, and speaking a line in Mandarin while the appearance and clothing stay unchanged. <Picture 1> provides the identity, pose, and composition; <Audio 1> guides the voice and delivery of <Subject 1>'s spoken line.
@@ -163,7 +191,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_SPEECH_CLAUSE.format(line=line)}
+[Shot 1] {scene}. {motion} {_speech_clause(script, sid)}
 
 overall_soundscape:
 {sound}
@@ -196,10 +224,11 @@ def build_dialog_prompt_identity(script: dict, sid: int | str) -> str:
     line = _clean_line(sh.get("line", ""))
     subj = _subject_desc(fp, "<Picture 1>")
     sound = _soundscape_for(script, sid, "dialog")
+    gender = _voice_gender(script, sid)
     return f"""subject_definitions:
 <Subject 1> is {subj}.
 <Picture 1> and <Picture 2> show the same person: <Picture 1> and <Picture 2> both depict <Subject 1>.
-<Audio 1> is the speech reference for <Subject 1> (S1), containing a spoken Mandarin female vocal layer.
+<Audio 1> is the speech reference for <Subject 1> (S1), containing a spoken Mandarin {gender} vocal layer.
 
 summary:
 [reference generation + audio reference] The target video shows <Subject 1> in the described gym scene, performing the described motion, and speaking a line in Mandarin while the appearance and clothing stay unchanged. <Picture 1> provides the framing and composition of the shot; <Picture 2> provides the identity of <Subject 1>; <Audio 1> guides the voice and delivery of <Subject 1>'s spoken line.
@@ -212,7 +241,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_SPEECH_CLAUSE.format(line=line)}
+[Shot 1] {scene}. {motion} {_speech_clause(script, sid)}
 
 overall_soundscape:
 {sound}
@@ -301,10 +330,13 @@ def build_dual_dialog_prompt(script: dict, sid: int | str) -> str:
     subj1 = _subject_desc(fp_other, "<Picture 1>")
     subj2 = _subject_desc(fp_spk, "<Picture 2>")
     sound = _soundscape_for(script, sid, "dialog")
+    gender = _voice_gender(script, sid)
+    voice_desc = _SPEECH_VOICE_DESC[gender]
+    spk_pron = "His" if gender == "male" else "Her"
     return f"""subject_definitions:
 <Subject 1> is {subj1}.
 <Subject 2> is {subj2}.
-<Audio 1> is the voice-timbre reference for <Subject 2> (S1), containing a spoken Mandarin female vocal layer.
+<Audio 1> is the voice-timbre reference for <Subject 2> (S1), containing a spoken Mandarin {gender} vocal layer.
 
 summary:
 [reference generation + audio reference] The target video shows <Subject 2> and <Subject 1> in the described gym scene, <Subject 2> speaking a line in Mandarin while <Subject 1> listens silently. <Picture 1> provides the listener's identity; <Picture 2> provides the speaker's identity; <Audio 1> guides the voice and delivery of <Subject 2>'s line.
@@ -318,7 +350,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. <Subject 2>, the person in <Picture 2> whose appearance is retained, and <Subject 1>, the person in <Picture 1> whose appearance is retained, are both fully visible with no obstruction, bodies upright and natural. {motion} <Subject 2> (S1) looks at <Subject 1> and says in a clear youthful female voice, <d>[中文]{line}</d> Her lips move in sync with the Mandarin line and close naturally after speaking, speaking the line exactly once, then immediately becoming fully silent with no extra sound. <Subject 1> remains completely silent with mouth closed throughout, no speech and no lip movement, listening to <Subject 2> with a natural expression and subtle nodding, minimal extra movement, body posture stable.
+[Shot 1] {scene}. <Subject 2>, the person in <Picture 2> whose appearance is retained, and <Subject 1>, the person in <Picture 1> whose appearance is retained, are both fully visible with no obstruction, bodies upright and natural. {motion} <Subject 2> (S1) looks at <Subject 1> and says in {voice_desc}, <d>[中文]{line}</d> {spk_pron} lips move in sync with the Mandarin line and close naturally after speaking, speaking the line exactly once, then immediately becoming fully silent with no extra sound. <Subject 1> remains completely silent with mouth closed throughout, no speech and no lip movement, listening to <Subject 2> with a natural expression and subtle nodding, minimal extra movement, body posture stable.
 
 overall_soundscape:
 {sound}

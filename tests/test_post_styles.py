@@ -82,9 +82,9 @@ def test_pick_transitions_rules():
 
 
 def test_pick_transitions_dialog_chain_and_fallback():
-    # dialog→dialog 快切; 未知组合兜底 fade; 末镜前 fadeblack
+    # dialog→dialog 慢溶 (2026-08-20 节奏修: 快擦抢话感); 未知组合兜底 fade; 末镜前 fadeblack
     got = pick_transitions(_mini_script(["dialog", "dialog", "ambient"]))
-    assert got == ["wipeleft", "fadeblack"]
+    assert got == ["fade", "fadeblack"]
     got2 = pick_transitions(_mini_script(["ambient", "ambient", "ambient"]))
     assert got2 == ["fade", "fadeblack"]
 

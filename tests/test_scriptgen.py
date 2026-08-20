@@ -66,8 +66,38 @@ def _spec_brief_only():
 
 def test_prompt_contains_few_shot():
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
-    assert "misty-blue" in p            # ep03 shot1 指纹
+    assert "misty-blue" in p            # 主角指纹 (duet 与 niuma 共用)
     assert "stays misty-blue throughout" in p   # 服装不变式
+
+
+# ---- 对话织体三律 + 双人 few-shot (2026-08-20) ----
+
+def test_prompt_contains_texture_rules():
+    """织体三律进 prompt: 轮转/接话/反应镜 + 五镜织体模板."""
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    assert "轮转律" in p
+    assert "接话律" in p
+    assert "反应镜律" in p
+    assert "牛马，明天见" in p                  # sign-off 规则保留
+
+
+def test_prompt_dual_few_shot_full_episode():
+    """few-shot 默认 ep27_duet 全 5 镜 — 织体是跨镜结构, 只看单镜学不到."""
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    few = p.split("【格式示例")[1]
+    for sid in ("\"1\"", "\"2\"", "\"3\"", "\"4\"", "\"5\""):
+        assert sid in few                    # 5 镜齐
+    assert "LICOACH" in few                  # 双人示例
+    assert "\"line_type\": \"ambient\"" in few   # 反应镜示范 (镜3 无台词)
+    assert "frame_chars" in few                  # 双人同框镜示范 (镜4, json 多行展开)
+
+
+def test_prompt_dual_dialog_unban_rule():
+    """双人同框 dialog 解禁但限量: ≤1/集, 默认正反打."""
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    assert "每集 ≤1 个" in p                  # 限量规则
+    assert "正反打" in p                      # 单人默认仍标榜
+    assert "绝不能让角色在双人画面里说台词" not in p   # 旧全禁令已删
 
 
 def test_prompt_contains_style_block():

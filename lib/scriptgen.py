@@ -74,18 +74,22 @@ def _sanitize_voice_id(key: str, value: str | None, default: str) -> str:
     return v
 
 
-# ---- few-shot (从 scripts/ep03_niuma.json 读, 避免手抄漂移) ----
+# ---- few-shot (从 scripts/ 素材 json 读, 避免手抄漂移) ----
 
-def _load_few_shot_shots(*shot_ids: int) -> dict:
-    """读 scripts/ep03_niuma.json 的角色指纹 + 指定 shot, 作 prompt few-shot 示例.
+def _load_few_shot_shots(*shot_ids: int, path: str | None = None) -> dict:
+    """读 few-shot 素材 json 的角色指纹 + 指定 shot, 作 prompt few-shot 示例.
 
-    ⚠ ep03_niuma.json 仅是 few-shot 素材, 不是可跑剧本 — 缺 style/neg/voice_id,
+    ⚠ 素材 json 仅是 few-shot 素材, 不是可跑剧本 — 缺 style/neg,
     不满足 load_json_script/validate 的完整 schema, 勿喂 orchestrator.
-    素材 5 镜全 dialog (无 voiceover 镜), prompt 只让它演示结构与趣味.
+
+    2026-08-20: 默认切 ep27_duet.json (双人轮转黄金示例 — 织体三律
+    轮转/接话/反应镜 + 每集 ≤1 双人同框 dialog 镜的完整示范);
+    ep03_niuma.json (单人自嘲版) 保留为 path= 显式回退.
 
     只取 fingerprint + shots, 不带 name/face_ref/body_ref/lora (贴近 LLM 输出子集).
     """
-    path = os.path.join(MANJU, "scripts", "ep03_niuma.json")
+    if path is None:
+        path = os.path.join(MANJU, "scripts", "ep27_duet.json")
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     out = {"characters": {}, "shots": {}}
@@ -171,6 +175,20 @@ neg: {neg}
      每集结尾固定喊本剧 sign-off "牛马，明天见。" (紧跟悬念句后, 形成品牌记忆点), 不得改写。
      ⚠ 例外说明: few-shot 镜5 未含 sign-off, 属于少数省略场合 — 新产剧本镜5 必须带 (sign-off
      是本剧固定收尾词, 不计入"照抄示例"查重线, 固定句不算抄袭)。
+
+   对话织体三律 (2026-08-20 用户拍板: 情节与人物互动太简单, 对话感是第一提升点):
+   ① 轮转律: 相邻有台词的镜 speaker 必须不同 (林夏说→教练接→林夏说), 同一角色
+     禁止连续 2 镜有台词。双人剧本必须让两个角色都说上话。
+   ② 接话律: 后说者的台词必须**直接接前一句的话头** — 引用对方的词、反驳、毒舌
+     补刀、顺着梗往下翻 (甲:"器械比领导还难搞" 乙:"领导至少不会让你当场社死")。
+     禁止各说各的: 两人台词像两条平行线、去掉谁都不影响另一句 = 不合格。
+   ③ 反应镜律: 全片至少 1 镜为**无台词反应 beat** (line_type=ambient, line 留空):
+     被怼到失语 / 扶额 / 瞳孔地震 / 无语望天 — 用表情演戏, 是喜剧的"停顿拍"。
+     motion 里写足表情动作 (没有台词的镜, 表情就是全部台词)。
+   五镜织体参考模板 (镜位功能不变, 只换织体):
+     镜1 林夏 dialog 单人(钩子) → 镜2 教练 dialog 单人(接话毒舌) →
+     镜3 反应 beat ambient 无台词(梗位) → 镜4 双人同框 教练 dialog(转折) →
+     镜5 林夏 dialog 单人(悬念+sign-off)。
    每镜四字段:
    - shot (英文关键帧 prompt, 描述性静态场景), 必须:
      a) 以景别开头, **优先全身/大半身 (性感健身内容要秀身材, 2026-08-07 用户拍板)**: full body shot / medium full shot / three-quarter body shot 为主, 少用 medium close-up, 尽量不用 close-up (近景看不到身材);
@@ -197,9 +215,12 @@ neg: {neg}
        "ambient"   无台词纯环境音 (舞蹈/健身等动作镜, 此时 line 留空字符串)。
    - frame_chars (可选, 该镜画面中的角色KEY数组, 缺省= [speaker]):
       单人镜 = [speaker]; 双人同框镜 = [两个角色KEY]。
-      ⚠ **对话镜必须单人 (正反打)**: 有台词的镜 frame_chars 只能是 [speaker] 单人在画面。
-        双人同框镜只能是无台词 (voiceover/ambient, 两人一起动作), 绝不能让角色在双人画面里说台词。
-      ⚠ 原因: H3 双人同框对话音频不可靠 (说话人音色会被盖成女声), 正反打单人镜是工业标准。
+      ⚠ **双人同框对话镜每集 ≤1 个** (2026-08-20 解禁, 依据 ep26 镜2 修复验证):
+        双人对话镜已可靠 (说话者声线随 voice_id, 倾听者闭嘴), 但求稳为主 —
+        有台词的镜默认单人正反打, 每集最多 1 个双人同框 dialog 镜 (建议放镜4
+        转折位, 两人同框说话画面信息量最大)。其余双人同框镜仍必须无台词。
+      ⚠ 单人镜优先正反打 (工业标准): 说话者单人入画面, 对话感靠织体三律的
+        轮转+接话撑, 不靠同框。
    ⚠ **内心独白必须用 voiceover, 不能是 dialog**: 角色"心里想/内心OS/没说出来"的内容
      (如 "（内心：说好的不喘气呢！）") 要写成 `line_type: "voiceover"` — 角色闭嘴不出声,
      独白作为画外音后期叠入。line 只写独白内容本身 (去掉"（内心：...）"标注), 不要带括注。
@@ -210,7 +231,9 @@ neg: {neg}
 【角色设定(用户给定, 必须遵守)】
 {character_instructions}
 
-【格式示例(参考牛马梗黄金结构 ep03_niuma《加班三年，我第一次准点下班》, 严格模仿其结构与趣味; 这是唯一格式参考)】
+【格式示例(双人轮转黄金结构 ep27_duet《教练说我的动作像在打卡》— 织体三律的完整示范:
+轮转 (林夏→教练→林夏) / 接话 (教练台词直接接林夏话头) / 反应镜 (镜3 无台词表情 beat) /
+镜4 双人同框 dialog。严格模仿其结构与趣味; 这是唯一格式参考)】
 {few_shot}
 """
 
@@ -241,10 +264,15 @@ def build_prompt(
     style: str,
     neg: str,
     characters_spec: dict | None = None,
-    few_shot_shots: tuple[int, ...] = (1,),
+    few_shot_shots: tuple[int, ...] = (1, 2, 3, 4, 5),
+    few_shot_path: str | None = None,
 ) -> str:
-    """构造完整单轮 prompt (任务+画风+格式规范+角色+few-shot)."""
-    few = _load_few_shot_shots(*few_shot_shots)
+    """构造完整单轮 prompt (任务+画风+格式规范+角色+few-shot).
+
+    few_shot_shots 默认全 5 镜: ep27_duet 双人轮转示例必须整集展示
+    (织体三律是跨镜结构, 只看单镜学不到轮转/接话)。
+    """
+    few = _load_few_shot_shots(*few_shot_shots, path=few_shot_path)
     return _PROMPT_TEMPLATE.format(
         subject=subject,
         title=title,

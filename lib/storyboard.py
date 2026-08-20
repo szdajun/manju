@@ -239,10 +239,12 @@ def frame_chars(script: dict, sid: int | str) -> list[str] | None:
     """该镜画面里的角色列表 (混合方案 2026-08-07 新增).
 
     - 显式标注 shot dict 的 frame_chars → 用它 (控制单人/双人取景).
+      ⚠ [] (空数组) = 缓冲空镜无人 (2026-08-20 织体第④律), 是显式"无角色",
+      必须原样返回 — 不能当 falsy 穿透到双人默认, 否则空镜被强塞双人 ref.
     - 缺省 None → 默认: 剧本多角色 = 双人同框, 单角色 = 单人.
     """
     fc = shot(script, sid).get("frame_chars")
-    if fc:
+    if fc is not None:
         return [str(c) for c in fc]
     if len(script["characters"]) >= 2:
         return list(script["characters"].keys())

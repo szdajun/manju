@@ -28,7 +28,7 @@ def main():
     ap.add_argument("--ep-start", required=True, help="首集号, 如 21")
     ap.add_argument("--episodes", type=int, default=None,
                     help="集数 (默认 auto 按字数分组)")
-    ap.add_argument("--shots", type=int, default=5, help="每集镜头数 (默认 5)")
+    ap.add_argument("--shots", type=int, default=6, help="每集镜头数 (默认 6, 织体四律 6 镜模板)")
     ap.add_argument("--style", choices=["real", "cartoon"], default="real")
     ap.add_argument("--no-char-lock", action="store_true",
                     help="关闭系列角色锁定 (每集独立提取角色; 默认锁定跨集一致)")

@@ -310,6 +310,33 @@ N/A"""
 
 # ============ 双人 ============
 
+def build_buffer_prompt(script: dict, sid: int | str) -> str:
+    """环境缓冲空镜 (织体第④律 2026-08-20): frame_chars=[] 无人 — 无 Subject/ref,
+    纯场景 + overall_soundscape. kf 是 txt2img 无 PuLID, i2v 无 ref 图.
+    """
+    sh = shot(script, sid)
+    scene = _capitalize(sh.get("shot", "").rstrip("."))
+    motion = _ensure_period(sh.get("motion", ""))
+    sound = _soundscape_for(script, sid, "ambient")
+    return f"""subject_definitions:
+N/A (no characters in this shot)
+
+summary:
+[reference generation] The target video shows only the described environment scene with no people, {motion} The scene remains completely empty of any person or face throughout.
+
+retention_analysis:
+- <Picture 1> provides the composition and lighting of the empty scene.
+
+detailed_description:
+{_style_sentence(script)}
+[Shot 1] {scene}, with no people visible anywhere in the frame. {motion} No characters, no faces, no people appear at any point.
+
+overall_soundscape:
+{sound}
+
+non_diegetic_music:
+N/A"""
+
 def _dual_roles(script: dict, sid: int | str):
     """返回 (listener_key, speaker_key, listener_fp, speaker_fp). 顺序对齐 ref_images=[倾听者, 说话者]."""
     spk = speaker(script, sid)

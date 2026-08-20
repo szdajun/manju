@@ -70,26 +70,35 @@ def test_prompt_contains_few_shot():
     assert "stays misty-blue throughout" in p   # 服装不变式
 
 
-# ---- 对话织体三律 + 双人 few-shot (2026-08-20) ----
+# ---- 对话织体四律 + 双人 few-shot (2026-08-20, 同日 +缓冲镜律) ----
 
 def test_prompt_contains_texture_rules():
-    """织体三律进 prompt: 轮转/接话/反应镜 + 五镜织体模板."""
+    """织体四律进 prompt: 轮转/接话/反应镜/缓冲镜 + 六镜织体模板."""
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
     assert "轮转律" in p
     assert "接话律" in p
     assert "反应镜律" in p
+    assert "缓冲镜律" in p                     # 第④律 (2026-08-20 节奏修)
     assert "牛马，明天见" in p                  # sign-off 规则保留
 
 
 def test_prompt_dual_few_shot_full_episode():
-    """few-shot 默认 ep27_duet 全 5 镜 — 织体是跨镜结构, 只看单镜学不到."""
+    """few-shot 默认 ep27_duet 全 6 镜 — 织体是跨镜结构, 只看单镜学不到."""
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
     few = p.split("【格式示例")[1]
-    for sid in ("\"1\"", "\"2\"", "\"3\"", "\"4\"", "\"5\""):
-        assert sid in few                    # 5 镜齐
+    for sid in ("\"1\"", "\"2\"", "\"3\"", "\"4\"", "\"5\"", "\"6\""):
+        assert sid in few                    # 6 镜齐
     assert "LICOACH" in few                  # 双人示例
-    assert "\"line_type\": \"ambient\"" in few   # 反应镜示范 (镜3 无台词)
-    assert "frame_chars" in few                  # 双人同框镜示范 (镜4, json 多行展开)
+    assert "\"line_type\": \"ambient\"" in few   # 反应镜/缓冲镜示范 (无台词)
+    assert "frame_chars" in few                  # 空镜 []/双人同框示范 (json 多行展开)
+
+
+def test_prompt_buffer_shot_rule():
+    """缓冲镜律: 无人纯环境空镜 frame_chars=[] 与反应镜区分."""
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    assert "frame_chars 留空数组 []" in p      # 显式无人标注
+    assert "纯场景画面给观众换气" in p          # 呼吸位语义
+    assert "六镜织体参考模板" in p              # 6 镜模板替换 5 镜版
 
 
 def test_prompt_dual_dialog_unban_rule():

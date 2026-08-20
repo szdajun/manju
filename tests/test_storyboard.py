@@ -104,6 +104,24 @@ def test_shot_helpers():
     assert character(script, 1)["fingerprint"].startswith("1girl")
 
 
+# ---- frame_chars 空数组 = 缓冲空镜 (织体第④律, 2026-08-20) ----
+
+def test_frame_chars_empty_array_is_no_char():
+    """[] 是显式"无人" — 不得 falsy 穿透到双人默认 (空镜被强塞双人 ref)."""
+    from lib.storyboard import frame_chars
+    script = {"characters": {"A": {}, "B": {}},
+              "shots": {"1": {"frame_chars": [], "speaker": "A"}}}
+    assert frame_chars(script, 1) == []
+
+
+def test_frame_chars_default_dual():
+    """缺省 None + 双角色剧本 → 双人同框默认 (原行为不变)."""
+    from lib.storyboard import frame_chars
+    script = {"characters": {"A": {}, "B": {}},
+              "shots": {"1": {"speaker": "A"}}}
+    assert frame_chars(script, 1) == ["A", "B"]
+
+
 # ---- line_type (镜头台词类型, 2026-08-06 端到端整合) ----
 
 def test_line_type_backward_compat_dialog():

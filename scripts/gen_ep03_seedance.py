@@ -238,6 +238,13 @@ def main():
                 if args.seed is not None:
                     kw["seed"] = args.seed
                 fc = frame_chars(script, s)
+                # 缓冲空镜 (织体第④律): frame_chars=[] → 无人纯场景, 无 ref 无 audio
+                if fc is not None and len(fc) == 0:
+                    if args.prompt_style == "official":
+                        prompt = h3prompt.build_buffer_prompt(script, s)
+                    else:
+                        prompt = h3prompt.build_ambient_prompt(script, s) + FACE_POS
+                    kw["mode"] = "single"
                 fc = [c for c in (fc or []) if c in script["characters"]
                       and (script["characters"][c].get("face_ref")
                            or script["characters"][c].get("body_ref"))]

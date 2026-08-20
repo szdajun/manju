@@ -23,9 +23,10 @@ MANJU = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, MANJU)
 
 from lib.comfyui_client import (  # noqa: E402
-    ComfyUIClient, build_face_shot_workflow, build_face_body_shot_workflow)
+    ComfyUIClient, build_face_shot_workflow, build_face_body_shot_workflow,
+    build_txt2img_workflow)
 from lib.storyboard import (  # noqa: E402
-    character, load_script, shot, speaker)
+    character, frame_chars, load_script, shot, speaker)
 
 # 2026-08-15 P0: 默认 SDXL (face_sim 0.12→目标0.35+, IPAdapterUnifiedLoader 自动选 sdxl face adapter)
 DEFAULT_CKPT = "sd_xl_base_1.0.safetensors"
@@ -153,7 +154,18 @@ def main():
             neg += ", waxy doll skin, overly smooth skin, rubbery skin texture"
         elif args.extra_neg:
             neg += f", {args.extra_neg}"
-        if body_name:
+        # ⭐ 2026-08-20 缓冲空镜 (织体第④律): frame_chars=[] → 无人纯场景,
+        # txt2img 无 PuLID 注入 (FACE adapter 会给空镜召唤出人脸, 大头教训同根)
+        _fc = frame_chars(script, s)
+        if _fc is not None and len(_fc) == 0:
+            neg += ", no humans, no people, no face"
+            wf = build_txt2img_workflow(
+                positive=pos, negative=neg,
+                ckpt=args.ckpt, seed=args.seed,
+                width=args.width, height=args.height, cfg=args.cfg,
+                filename_prefix=f"{prefix}{s:02d}")
+            mode = "TXT2IMG buffer (no char)"
+        elif body_name:
             wf = build_face_body_shot_workflow(
                 ref_face_name=face_name,
                 ref_body_name=body_name,

@@ -82,8 +82,8 @@ def _load_few_shot_shots(*shot_ids: int, path: str | None = None) -> dict:
     ⚠ 素材 json 仅是 few-shot 素材, 不是可跑剧本 — 缺 style/neg,
     不满足 load_json_script/validate 的完整 schema, 勿喂 orchestrator.
 
-    2026-08-20: 默认切 ep27_duet.json (双人轮转黄金示例 — 织体三律
-    轮转/接话/反应镜 + 每集 ≤1 双人同框 dialog 镜的完整示范);
+    2026-08-20: 默认切 ep27_duet.json (双人轮转黄金示例 — 织体四律
+    轮转/接话/反应镜/缓冲镜 + 每集 ≤1 双人同框 dialog 镜的完整示范);
     ep03_niuma.json (单人自嘲版) 保留为 path= 显式回退.
 
     只取 fingerprint + shots, 不带 name/face_ref/body_ref/lora (贴近 LLM 输出子集).
@@ -176,7 +176,8 @@ neg: {neg}
      ⚠ 例外说明: few-shot 镜5 未含 sign-off, 属于少数省略场合 — 新产剧本镜5 必须带 (sign-off
      是本剧固定收尾词, 不计入"照抄示例"查重线, 固定句不算抄袭)。
 
-   对话织体三律 (2026-08-20 用户拍板: 情节与人物互动太简单, 对话感是第一提升点):
+   对话织体四律 (2026-08-20 用户拍板: 情节与人物互动太简单, 对话感是第一提升点;
+   同日追加第④律: 分镜衔接太仓促, 需缓冲位):
    ① 轮转律: 相邻有台词的镜 speaker 必须不同 (林夏说→教练接→林夏说), 同一角色
      禁止连续 2 镜有台词。双人剧本必须让两个角色都说上话。
    ② 接话律: 后说者的台词必须**直接接前一句的话头** — 引用对方的词、反驳、毒舌
@@ -185,10 +186,15 @@ neg: {neg}
    ③ 反应镜律: 全片至少 1 镜为**无台词反应 beat** (line_type=ambient, line 留空):
      被怼到失语 / 扶额 / 瞳孔地震 / 无语望天 — 用表情演戏, 是喜剧的"停顿拍"。
      motion 里写足表情动作 (没有台词的镜, 表情就是全部台词)。
-   五镜织体参考模板 (镜位功能不变, 只换织体):
+   ④ 缓冲镜律: 全片至少 1 镜为**环境缓冲空镜** (line_type=ambient, line 留空,
+     frame_chars 留空数组 [] 表示画面无角色): 器械特写 / 天花板灯 / 窗外夜色 /
+     墙上标语 — 纯场景画面给观众换气, 是镜头间的"呼吸位"。放在两个紧凑对话段
+     之间 (建议镜3 或镜4 位)。⚠ 与反应镜不同: 反应镜有人 (表情演戏), 缓冲镜无人
+     (纯环境); 一镜可以二选一, 不可兼任, 全片两者都要有。
+   六镜织体参考模板 (镜位功能不变, 只换织体):
      镜1 林夏 dialog 单人(钩子) → 镜2 教练 dialog 单人(接话毒舌) →
-     镜3 反应 beat ambient 无台词(梗位) → 镜4 双人同框 教练 dialog(转折) →
-     镜5 林夏 dialog 单人(悬念+sign-off)。
+     镜3 环境 buffer ambient 无台词无人(呼吸位) → 镜4 反应 beat ambient 无台词有人
+     (梗位) → 镜5 双人同框 教练 dialog(转折) → 镜6 林夏 dialog 单人(悬念+sign-off)。
    每镜四字段:
    - shot (英文关键帧 prompt, 描述性静态场景), 必须:
      a) 以景别开头, **优先全身/大半身 (性感健身内容要秀身材, 2026-08-07 用户拍板)**: full body shot / medium full shot / three-quarter body shot 为主, 少用 medium close-up, 尽量不用 close-up (近景看不到身材);
@@ -231,9 +237,9 @@ neg: {neg}
 【角色设定(用户给定, 必须遵守)】
 {character_instructions}
 
-【格式示例(双人轮转黄金结构 ep27_duet《教练说我的动作像在打卡》— 织体三律的完整示范:
-轮转 (林夏→教练→林夏) / 接话 (教练台词直接接林夏话头) / 反应镜 (镜3 无台词表情 beat) /
-镜4 双人同框 dialog。严格模仿其结构与趣味; 这是唯一格式参考)】
+【格式示例(双人轮转黄金结构 ep27_duet6《教练说我的动作像在打卡》— 织体四律的完整示范:
+轮转 (林夏→教练→林夏) / 接话 (教练台词直接接林夏话头) / 缓冲镜 (镜3 纯环境无人 beat) /
+反应镜 (镜4 无台词表情 beat) / 镜5 双人同框 dialog。严格模仿其结构与趣味; 这是唯一格式参考)】
 {few_shot}
 """
 
@@ -264,13 +270,13 @@ def build_prompt(
     style: str,
     neg: str,
     characters_spec: dict | None = None,
-    few_shot_shots: tuple[int, ...] = (1, 2, 3, 4, 5),
+    few_shot_shots: tuple[int, ...] = (1, 2, 3, 4, 5, 6),
     few_shot_path: str | None = None,
 ) -> str:
     """构造完整单轮 prompt (任务+画风+格式规范+角色+few-shot).
 
-    few_shot_shots 默认全 5 镜: ep27_duet 双人轮转示例必须整集展示
-    (织体三律是跨镜结构, 只看单镜学不到轮转/接话)。
+    few_shot_shots 默认全 6 镜: ep27_duet 双人轮转示例必须整集展示
+    (织体四律是跨镜结构, 只看单镜学不到轮转/接话)。
     """
     few = _load_few_shot_shots(*few_shot_shots, path=few_shot_path)
     return _PROMPT_TEMPLATE.format(
@@ -427,7 +433,7 @@ def _default_ask(prompt: str, *, max_tokens: int, temperature: float) -> str:
 def gen_script(
     subject: str,
     title: str,
-    n_shots: int = 5,
+    n_shots: int = 6,
     style: str = "real",
     ep: str = "04",
     characters_spec: dict | None = None,

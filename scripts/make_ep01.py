@@ -191,27 +191,53 @@ def gen_seg_dyn(src, dst, dur, sub_png, factor=3.0):
         run([FFMPEG, "-y", "-i", src, "-vf", base] + enc_args() + [dst])
 
 
-def gen_seg_i2v(src, dst, sub_png, fps=V4_FPS):
+def gen_seg_i2v(src, dst, sub_png, fps=V4_FPS, breathe=None):
     """写实 i2v 片段: 已是动态视频(5s@24fps), 不 KB 不慢放。
     scale+crop 到 720×1280(源 480×864 lanczos 1.5× 上采) + 字幕 overlay。fps 保原生流畅。
 
     ⚠ 2026-08-06 端到端整合: `-map 0:a?` 保留源音频 (H3 原生音: 对话语音/环境音).
       历史 -map [v] 只映射视频 → H3 自带音到组装全丢 (端到端根因 bug, 已修).
       `0:a?` 可选映射: 无音源 (seedance/ltx) 自动跳过, 旧流零回归.
+
+    breathe=(head, tail) 秒: 2026-08-20 用户反馈"衔接太仓促" — 首帧定格 head 秒
+    + 尾帧定格 tail 秒 (tpad), 音轨同步 adelay/apad。H3 台词 ~0.2s 起说,
+    head=0.4 给起说前一个呼吸位, xfade 0.6 慢溶叠上后衔接不再抢话。
     """
     base = (f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,"
             f"crop={W}:{H},fps={fps}")
+    if breathe:
+        h_ms, t_ms = int(breathe[0] * 1000), int(breathe[1] * 1000)
+        base = (f"{base},tpad=start_duration={breathe[0]}:start_mode=clone:"
+                f"stop_duration={breathe[1]}:stop_mode=clone")
+        # 音轨: 头静音 adelay + 尾静音 apad (pad_dur), 与视频 tpad 对齐
+        a_pad = f"adelay={h_ms}:all=1,apad=pad_dur={breathe[1] + 0.5}"
+        a_fc = f"[0:a]{a_pad}[a]" if _has_audio_stream(src) else None
+    else:
+        a_fc = None
     if sub_png:
-        fc = f"[0:v]{base}[bg];[bg][1:v]overlay=0:0:shortest=1[v]"
+        chain = f"{base}[bg];[bg][1:v]overlay=0:0:shortest=1[v]"
+        if a_fc:
+            fc = f"[0:v]{chain};{a_fc}"
+            maps = ["-map", "[v]", "-map", "[a]"]
+        else:
+            fc = f"[0:v]{chain}"
+            maps = ["-map", "[v]", "-map", "0:a?"]
         run([FFMPEG, "-y", "-i", src, "-loop", "1", "-i", sub_png,
-             "-filter_complex", fc, "-map", "[v]", "-map", "0:a?",
+             "-filter_complex", fc, *maps,
              "-c:a", "aac", "-b:a", "128k", "-shortest"]
             + enc_args(fps=fps, ts=V4_TS) + [dst])
     else:
-        run([FFMPEG, "-y", "-i", src, "-vf", base,
-             "-map", "0:v", "-map", "0:a?", "-c:a", "aac", "-b:a", "128k",
-             "-shortest"]
-            + enc_args(fps=fps, ts=V4_TS) + [dst])
+        if a_fc:
+            fc = f"[0:v]{base}[v];{a_fc}"
+            run([FFMPEG, "-y", "-i", src, "-filter_complex", fc,
+                 "-map", "[v]", "-map", "[a]",
+                 "-c:a", "aac", "-b:a", "128k", "-shortest"]
+                + enc_args(fps=fps, ts=V4_TS) + [dst])
+        else:
+            run([FFMPEG, "-y", "-i", src, "-vf", base,
+                 "-map", "0:v", "-map", "0:a?", "-c:a", "aac", "-b:a", "128k",
+                 "-shortest"]
+                 + enc_args(fps=fps, ts=V4_TS) + [dst])
 
 
 # ---------------- 拼接 ----------------

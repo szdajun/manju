@@ -41,7 +41,7 @@ def main():
                     help="i2v 片段目录 (默认 output/ep{ep}_i2v_real/_seedance)")
     ap.add_argument("--out", default=None,
                     help="成片输出 (默认 output/ep{ep}_assemble/ep{ep}_real.mp4)")
-    ap.add_argument("--xfade", type=float, default=0.4)
+    ap.add_argument("--xfade", type=float, default=0.6)
     ap.add_argument("--transition", default="fade",
                     help="xfade 转场类型: fade/fadeblack/dissolve/…, 默认 fade")
     # 2026-08-17 后处理风格库 (spec docs/superpowers/specs/2026-08-17-post-enhance-design.md)
@@ -108,8 +108,12 @@ def main():
             sub_png = os.path.join(tmp, f"sub{s:02d}_{post['sub_style']}.png")
             m.render_subtitle(clean_line(shot(script, s)["line"]), sub_png,
                               style=post["sub_style"])
+            # 2026-08-20 节奏: 对白镜头尾垫呼吸 (H3 台词 0.2s 起说太抢);
+            # ambient 反应镜不垫 (本身就是缓冲位)
+            lt = shot(script, s).get("line_type") or "dialog"
+            breathe = (0.4, 0.3) if lt in ("dialog", "voiceover") else None
             print(f"=== shot {s:2d} i2v -> seg ===", flush=True)
-            m.gen_seg_i2v(src, seg_v, sub_png)
+            m.gen_seg_i2v(src, seg_v, sub_png, breathe=breathe)
         else:
             print(f"=== shot {s:2d} seg cached ===")
         voice = os.path.join(voice_dir, f"voice_shot{s:02d}.mp3")

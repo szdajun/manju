@@ -89,6 +89,16 @@ def _speech_clause(script: dict, sid: int | str) -> str:
                          line=_clean_line(shot(script, sid).get("line", "")))
 
 
+def _camera_clause(script: dict, sid: int | str) -> str:
+    """从 motion 提取运镜描述 (含 camera/pan/tilt/push 等词的部分), 写进 detailed_description."""
+    motion = shot(script, sid).get("motion", "")
+    for marker in ("camera", "push", "pull", "pan", "tilt", "track", "dolly", "arc", "zoom"):
+        if marker in motion:
+            seg = motion[motion.index(marker):].split(",")[0].strip().rstrip(".")
+            return f" {seg}."
+    return ""
+
+
 # ============ helpers ============
 
 def _clean_line(line: str) -> str:
@@ -191,7 +201,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_speech_clause(script, sid)}
+[Shot 1] {scene}. {motion} {_camera_clause(script, sid)}{_speech_clause(script, sid)}
 
 overall_soundscape:
 {sound}
@@ -241,7 +251,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_speech_clause(script, sid)}
+[Shot 1] {scene}. {motion} {_camera_clause(script, sid)}{_speech_clause(script, sid)}
 
 overall_soundscape:
 {sound}
@@ -270,7 +280,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_silent_clause(script, sid)}
+[Shot 1] {scene}. {motion} {_camera_clause(script, sid)}{_silent_clause(script, sid)}
 
 overall_soundscape:
 {sound}
@@ -299,7 +309,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_silent_clause(script, sid, ambient=True)}
+[Shot 1] {scene}. {motion} {_camera_clause(script, sid)}{_silent_clause(script, sid, ambient=True)}
 
 overall_soundscape:
 {sound}
@@ -377,7 +387,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. <Subject 2>, the person in <Picture 2> whose appearance is retained, and <Subject 1>, the person in <Picture 1> whose appearance is retained, are both fully visible with no obstruction, bodies upright and natural. {motion} <Subject 2> (S1) looks at <Subject 1> and says in {voice_desc}, <d>[中文]{line}</d> {spk_pron} lips move in sync with the Mandarin line and close naturally after speaking, speaking the line exactly once, then immediately becoming fully silent with no extra sound. <Subject 1> remains completely silent with mouth closed throughout, no speech and no lip movement, listening to <Subject 2> with a natural expression and subtle nodding, minimal extra movement, body posture stable.
+[Shot 1] {scene}. <Subject 2>, the person in <Picture 2> whose appearance is retained, and <Subject 1>, the person in <Picture 1> whose appearance is retained, are both fully visible with no obstruction, bodies upright and natural. {motion} {_camera_clause(script, sid)}<Subject 2> (S1) looks at <Subject 1> and says in {voice_desc}, <d>[中文]{line}</d> {spk_pron} lips move in sync with the Mandarin line and close naturally after speaking, speaking the line exactly once, then immediately becoming fully silent with no extra sound. <Subject 1> remains completely silent with mouth closed throughout, no speech and no lip movement, listening to <Subject 2> with a natural expression and subtle nodding, minimal extra movement, body posture stable.
 
 overall_soundscape:
 {sound}
@@ -411,7 +421,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. <Subject 1> and <Subject 2> are both fully visible with no obstruction, bodies upright and natural. {motion} Both stay completely silent with mouths closed, no speech and no lip movement, natural breathing only.
+[Shot 1] {scene}. <Subject 1> and <Subject 2> are both fully visible with no obstruction, bodies upright and natural. {motion} {_camera_clause(script, sid)}Both stay completely silent with mouths closed, no speech and no lip movement, natural breathing only.
 
 overall_soundscape:
 {sound}

@@ -317,3 +317,12 @@ def test_character_none_contract_all_builders_tolerate():
                     h3prompt.build_ambient_prompt):
         out = builder(script, 3)
         assert isinstance(out, str) and out.strip()
+
+
+# ---- 运镜 clause (2026-08-21 ep30 镜3 教训: 剧本 motion 含运镜词) ----
+
+def test_camera_clause_extracts_from_motion():
+    script = _single_script()
+    script["shots"]["1"]["motion"] = "Linxia squats, subtle motion, camera slowly pushes in, the bra stays misty-blue"
+    assert "camera slowly pushes in" in h3prompt._camera_clause(script, 1)
+    assert h3prompt.build_dialog_prompt(script, 1)  # 不崩

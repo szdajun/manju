@@ -127,6 +127,13 @@ EP_SCRIPTS = {
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
+    "31": {   # 2026-08-21 ep31 多人团课 (燃脂vs加班, 路人泛化多人镜首验)
+        "kf": "gen_ep03_real_batch.py",
+        "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
+        "voice": "voice_ep03.py",
+        "assemble": "make_ep03_real.py",
+    },
 }
 
 

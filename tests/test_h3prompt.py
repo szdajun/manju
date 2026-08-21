@@ -335,7 +335,7 @@ def test_camera_clause_extracts_from_motion():
 def test_extras_clause_extracts_group():
     script = _dual_script()
     script["shots"]["1"]["shot"] = "wide shot, group of people doing fitness, extras in background"
-    assert "extras in background" in h3prompt._extras_clause(script, 1)
+    assert "group of people doing fitness" in h3prompt._extras_clause(script, 1)
     assert "blurred and unidentifiable" in h3prompt._extras_clause(script, 1)
 
 
@@ -346,12 +346,19 @@ def test_extras_clause_empty_for_solo_shot():
     assert h3prompt._extras_clause(script, 1) == ""
 
 
+def test_extras_clause_ignores_bare_people():
+    """裸 "people" (双人镜 "two people facing") 不触发 extras — 防误伤 (Task2 修)."""
+    script = _dual_script()
+    script["shots"]["1"]["shot"] = "two people facing each other"
+    assert h3prompt._extras_clause(script, 1) == ""
+
+
 def test_dual_scene_extras_in_detailed_description():
     """多人镜 → extras 描述写进 build_dual_scene_prompt 的 detailed_description."""
     script = _dual_script()
     script["shots"]["2"]["shot"] = "wide shot, group of people doing fitness, extras in background"
     p = h3prompt.build_dual_scene_prompt(script, 2, kind="ambient")
-    assert "extras in background appear in the background, blurred and unidentifiable" in p
+    assert "group of people doing fitness appear in the background, blurred and unidentifiable" in p
 
 
 def test_ambient_extras_in_detailed_description():

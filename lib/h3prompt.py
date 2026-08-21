@@ -100,10 +100,12 @@ def _camera_clause(script: dict, sid: int | str) -> str:
 
 
 def _extras_clause(script: dict, sid: int | str) -> str:
-    """多人镜: 从 shot 提取路人描述 (extras/people/group 相关段), 写进 detailed_description.
-    路人泛化 (2026-08-21): 背景群演不锁脸, 只保证主角可识别."""
+    """多人镜: 从 shot 提取路人描述 (extras/group 相关段), 写进 detailed_description.
+    路人泛化 (2026-08-21): 背景群演不锁脸, 只保证主角可识别.
+    ⚠ 触发词只认群语义 (extras/group of/group fitness/crowd), 不含裸 "people" —
+       双人镜 "two people facing each other" 会被误伤 (ep31 Task2 修)."""
     shot_text = shot(script, sid).get("shot", "")
-    for marker in ("extras", "people", "group of", "group fitness"):
+    for marker in ("group of", "group fitness", "crowd", "extras"):
         if marker in shot_text:
             seg = shot_text[shot_text.index(marker):].split(",")[0].strip().rstrip(".")
             return f" {seg} appear in the background, blurred and unidentifiable, not focused."

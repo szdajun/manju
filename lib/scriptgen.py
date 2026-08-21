@@ -228,12 +228,13 @@ neg: {neg}
         动作后, 格式 "camera slowly pushes in" / "camera tracks her movement"。
         训练镜用 Push In / Tracking (跟随力量动作), 对话镜用 Slow Push In,
         反应镜用 Subtle Dolly / Arc。幅度轻 (slow/slight), 不眩晕。禁止 Static 全片。
-     ⚠ **训练镜强制规则 (题材含力量训练时, 本集必须遵守)**: 至少 4 镜的 motion 必须把**真实训练动作**写成
-       动作主体 — deep squat 深蹲 / deadlift 硬拉 / overhead barbell press 杠铃推举 / barbell curl 弯举 /
-       dumbbell row 划船 / walking lunge 箭步蹲 / bench press 卧推 任选。motion 的主语是"正在练"的动作,
+     ⚠ **训练镜强制规则 (题材含力量/柔韧训练时, 本集必须遵守)**: 至少 4 镜的 motion 必须把**真实训练动作**写成
+       动作主体 — 力量: deep squat 深蹲 / deadlift 硬拉 / overhead barbell press 杠铃推举 / barbell curl 弯举 /
+       dumbbell row 划船 / walking lunge 箭步蹲 / bench press 卧推; 柔韧: front split 竖叉 / side split 横叉 /
+       straddle stretch 横叉拉伸 / hamstring stretch 腿筋拉伸 / pike stretch 坐位体前屈 任选。motion 的主语是"正在练"的动作,
        不是"站着说话/只比划手势"; 动作必须写进 motion 主谓, 不能只出现在 shot 背景里。
-       训练镜 motion 示例: "Linxia does a deep squat holding the barbell on her shoulders, back straight,
-       knees tracking over toes, hips sinking below parallel, a strained comedic grin, subtle squat motion,
+       训练镜 motion 示例 (柔韧): "Linxia lowers into a front split, one leg forward one leg back, hips square,
+       trying to press her hips to the floor, face a mask of strain, subtle downward press, camera slowly pushes in,
        the misty-blue sports bra stays misty-blue throughout, the black booty shorts stay black throughout,
        the white arc logo stays in the same position on the left chest"。
    - speaker: 该镜说话的角色KEY。

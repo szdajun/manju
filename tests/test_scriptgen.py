@@ -135,6 +135,12 @@ def test_prompt_multi_person_extras_rule():
     assert "多人镜 ≤2" in p
 
 
+def test_prompt_flexibility_action_rule():
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    assert "front split" in p or "side split" in p
+    assert "straddle stretch" in p
+
+
 def test_prompt_contains_style_block():
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
     assert "photorealistic" in p

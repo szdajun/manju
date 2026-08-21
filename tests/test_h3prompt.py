@@ -326,3 +326,45 @@ def test_camera_clause_extracts_from_motion():
     script["shots"]["1"]["motion"] = "Linxia squats, subtle motion, camera slowly pushes in, the bra stays misty-blue"
     assert "camera slowly pushes in" in h3prompt._camera_clause(script, 1)
     assert h3prompt.build_dialog_prompt(script, 1)  # 不崩
+
+
+# ---- extras 路人描述 (ep31 多人团课, 2026-08-21) ----
+# seg 取自 shot 原文 "extras in background" (无 the), 模板再补 "in the background"
+# → 断言用 "extras in background" (brief 原文 "extras in the background" 不连续匹配)
+
+def test_extras_clause_extracts_group():
+    script = _dual_script()
+    script["shots"]["1"]["shot"] = "wide shot, group of people doing fitness, extras in background"
+    assert "extras in background" in h3prompt._extras_clause(script, 1)
+    assert "blurred and unidentifiable" in h3prompt._extras_clause(script, 1)
+
+
+def test_extras_clause_empty_for_solo_shot():
+    """单人镜 (无 extras/people/group 词) → 空串, detailed_description 不掺入."""
+    script = _dual_script()
+    script["shots"]["1"]["shot"] = "medium shot, gym mat"
+    assert h3prompt._extras_clause(script, 1) == ""
+
+
+def test_dual_scene_extras_in_detailed_description():
+    """多人镜 → extras 描述写进 build_dual_scene_prompt 的 detailed_description."""
+    script = _dual_script()
+    script["shots"]["2"]["shot"] = "wide shot, group of people doing fitness, extras in background"
+    p = h3prompt.build_dual_scene_prompt(script, 2, kind="ambient")
+    assert "extras in background appear in the background, blurred and unidentifiable" in p
+
+
+def test_ambient_extras_in_detailed_description():
+    """多人镜 → extras 描述写进 build_ambient_prompt 的 detailed_description."""
+    script = _single_script()
+    script["shots"]["3"]["shot"] = "wide shot, group of people doing fitness"
+    p = h3prompt.build_ambient_prompt(script, 3)
+    # marker "people" 先命中 → seg = "people doing fitness" ("group of" 排在后面)
+    assert "people doing fitness appear in the background, blurred and unidentifiable" in p
+
+
+def test_solo_shot_output_no_extras_clause():
+    """单人镜 (无 extras 词) → detailed_description 与改动前一致 (无 extras 掺入)."""
+    p = h3prompt.build_ambient_prompt(_single_script(), 3)
+    assert "blurred and unidentifiable" not in p
+    assert "in the background" not in p

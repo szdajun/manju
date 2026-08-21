@@ -99,6 +99,17 @@ def _camera_clause(script: dict, sid: int | str) -> str:
     return ""
 
 
+def _extras_clause(script: dict, sid: int | str) -> str:
+    """多人镜: 从 shot 提取路人描述 (extras/people/group 相关段), 写进 detailed_description.
+    路人泛化 (2026-08-21): 背景群演不锁脸, 只保证主角可识别."""
+    shot_text = shot(script, sid).get("shot", "")
+    for marker in ("extras", "people", "group of", "group fitness"):
+        if marker in shot_text:
+            seg = shot_text[shot_text.index(marker):].split(",")[0].strip().rstrip(".")
+            return f" {seg} appear in the background, blurred and unidentifiable, not focused."
+    return ""
+
+
 # ============ helpers ============
 
 def _clean_line(line: str) -> str:
@@ -309,7 +320,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. {motion} {_camera_clause(script, sid)}{_silent_clause(script, sid, ambient=True)}
+[Shot 1] {scene}. {motion} {_camera_clause(script, sid)}{_extras_clause(script, sid)}{_silent_clause(script, sid, ambient=True)}
 
 overall_soundscape:
 {sound}
@@ -421,7 +432,7 @@ retention_analysis:
 
 detailed_description:
 {_style_sentence(script)}
-[Shot 1] {scene}. <Subject 1> and <Subject 2> are both fully visible with no obstruction, bodies upright and natural. {motion} {_camera_clause(script, sid)}Both stay completely silent with mouths closed, no speech and no lip movement, natural breathing only.
+[Shot 1] {scene}. <Subject 1> and <Subject 2> are both fully visible with no obstruction, bodies upright and natural. {motion} {_camera_clause(script, sid)}{_extras_clause(script, sid)}Both stay completely silent with mouths closed, no speech and no lip movement, natural breathing only.
 
 overall_soundscape:
 {sound}

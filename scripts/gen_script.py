@@ -20,19 +20,19 @@ sys.path.insert(0, MANJU)
 
 from lib.scriptgen import gen_script  # noqa: E402
 
-# 默认角色: 林夏 v2 (2026-08-20 用户拍板: 性感运动装 + 腿拉长)。
+# 默认角色: 林夏 v3 (2026-08-21 用户拍板: 超短运动紧身裤 + 长腿 + 丰满)。
 # ⚠ face/body_ref 仍指 ep03 定妆 (长袖版) — PuLID 只锁脸, 服装靠指纹;
 # body_ref 若嫌旧可传 --char-assets 用更新定妆覆盖。
 _DEFAULT_CHARS = {
     "LINXIA": {
         "name": "林夏",
-        "brief": "健身女孩, 高马尾, 雾蓝运动内衣+黑色紧身裤, 大长腿",
+        "brief": "健身女孩, 高马尾, 雾蓝运动内衣+黑色超短运动紧身裤, 大长腿丰满",
         "fingerprint": (
             "1girl, solo, Linxia (林夏), a slim-fit 26-30 year-old Chinese woman with a "
-            "slim waist and long slender legs, black hair in a high ponytail, wearing a "
-            "misty-blue sports bra with a small white arc logo on the left chest, black "
-            "high-waist glossy leggings with a thin gray side stripe down the leg showing "
-            "her long legs, white running shoes, natural makeup, bright energetic eyes, "
+            "full bust, slim waist and very long slender legs, black hair in a high ponytail, "
+            "wearing a misty-blue sports bra with a small white arc logo on the left chest, "
+            "black high-waist spandex booty shorts with a thin gray side stripe showing her "
+            "long bare legs, white running shoes, natural makeup, bright energetic eyes, "
             "friendly confident expression, modern athletic wear, gym setting"),
         "face_ref": "output/ep03_lihui/linxia_real_face.png",
         "body_ref": "output/ep03_lihui/linxia_real.png",

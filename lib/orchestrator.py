@@ -120,6 +120,13 @@ EP_SCRIPTS = {
         "voice": "voice_ep03.py",
         "assemble": "make_ep03_real.py",
     },
+    "30": {   # 2026-08-21 ep30 运镜+景别轮换+形象v3 (首验: 深蹲/硬拉/推举三连)
+        "kf": "gen_ep03_real_batch.py",
+        "i2v": "gen_ep03_seedance.py",
+        "verify": "check_i2v_face.py",
+        "voice": "voice_ep03.py",
+        "assemble": "make_ep03_real.py",
+    },
 }
 
 

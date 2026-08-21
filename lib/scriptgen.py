@@ -220,6 +220,10 @@ neg: {neg}
      c) 句尾必带 3 句服装不变式, 颜色/标志必须与 fingerprint 完全一致:
         "the {{上衣颜色}} top stays {{颜色}} throughout, the {{裤色}} pants stay {{颜色}} throughout, the {{标志}} stays in the same position on the left chest"
       不变式示例: "the misty-blue sports bra stays misty-blue throughout, the black booty shorts stay black throughout, the white arc logo stays in the same position on the left chest"。
+     d) 运镜 (2026-08-21 视觉语言模块): 每镜带轻运镜描述, 打破固定视野。运镜写在
+        动作后, 格式 "camera slowly pushes in" / "camera tracks her movement"。
+        训练镜用 Push In / Tracking (跟随力量动作), 对话镜用 Slow Push In,
+        反应镜用 Subtle Dolly / Arc。幅度轻 (slow/slight), 不眩晕。禁止 Static 全片。
      ⚠ **训练镜强制规则 (题材含力量训练时, 本集必须遵守)**: 至少 4 镜的 motion 必须把**真实训练动作**写成
        动作主体 — deep squat 深蹲 / deadlift 硬拉 / overhead barbell press 杠铃推举 / barbell curl 弯举 /
        dumbbell row 划船 / walking lunge 箭步蹲 / bench press 卧推 任选。motion 的主语是"正在练"的动作,

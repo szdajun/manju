@@ -118,6 +118,16 @@ def test_prompt_shot_type_rotation():
     assert "相邻镜尽量不同景别" in p   # 相邻镜不同
 
 
+def test_prompt_camera_motion_rule():
+    """运镜规范 (2026-08-21): 每镜轻运镜进 motion 规范, 打破固定视野."""
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    assert "运镜" in p
+    assert "camera slowly pushes in" in p   # 关键运镜措辞
+    assert "camera tracks her movement" in p
+    assert "训练镜用 Push In / Tracking" in p  # 训练镜运镜
+    assert "禁止 Static 全片" in p           # 防固定视野
+
+
 def test_prompt_contains_style_block():
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
     assert "photorealistic" in p

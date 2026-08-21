@@ -109,6 +109,15 @@ def test_prompt_dual_dialog_unban_rule():
     assert "绝不能让角色在双人画面里说台词" not in p   # 旧全禁令已删
 
 
+def test_prompt_shot_type_rotation():
+    """景别轮换规范 (2026-08-21): 五大景别 + 全片≥3种 + 相邻镜不同 进 shot 规范."""
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    assert "景别轮换" in p
+    assert "五大景别" in p
+    assert "全片至少覆盖 3 种" in p     # 全片≥3种
+    assert "相邻镜尽量不同景别" in p   # 相邻镜不同
+
+
 def test_prompt_contains_style_block():
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
     assert "photorealistic" in p

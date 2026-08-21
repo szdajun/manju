@@ -200,6 +200,10 @@ neg: {neg}
    每镜四字段:
    - shot (英文关键帧 prompt, 描述性静态场景), 必须:
      a) 以景别开头, **优先全身/大半身 (性感健身内容要秀身材, 2026-08-07 用户拍板)**: full body shot / medium full shot / three-quarter body shot 为主, 少用 medium close-up, 尽量不用 close-up (近景看不到身材);
+     a') 景别轮换 (2026-08-21 视觉语言模块): 五大景别 EWS(极远景)/WS(全景)/MS(中景)/
+     MCU(近景)/CU(特写)。全片至少覆盖 3 种, 相邻镜尽量不同景别。训练镜优先 MS/WS
+     (秀身材+动作), 表情/反应镜用 MCU/CU (情绪), 环境镜用 EWS/WS (氛围)。禁止全片
+     同景别 (反例 ep29 全 medium full 呆板)。
      b) 含场景(如 "modern gym interior with treadmill in the background");
      c) 含角色名 + 完整服装指纹(每镜重复, 不得省略);
      d) 含角色当前动作姿态 + 表情;

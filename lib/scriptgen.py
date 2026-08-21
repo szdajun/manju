@@ -208,6 +208,10 @@ neg: {neg}
      c) 含角色名 + 完整服装指纹(每镜重复, 不得省略);
      d) 含角色当前动作姿态 + 表情;
      e) 含灯光(如 "bright overhead gym lighting") + 构图(如 "vertical composition") + 情绪 mood(如 "modern fitness atmosphere")。
+     f) 多人镜 (2026-08-21 团课/群场景): 需要多人同框时用**路人泛化** — 写
+        "3-5 people doing group fitness, extras in background unidentifiable",
+        只保证主角 (有指纹的角色) 可识别。⚠ 限制: 全片多人镜 ≤2 个 (H3 多人
+        未验证, 高崩坏风险); 路人不锁脸/不给独立指纹。
    - line (中文台词): 12-25 字, 短句, 口语化, 幽默/生活化, 与镜内容强关联, 适合配音。
      趣味标准: 台词要"让人想截图/发朋友"。优先自嘲式比喻("这杠铃比我的KPI还重")、
      职场黑话错位("深蹲算不算向下管理")、反差吐槽; 禁止正经鼓励/教学腔/舔狗文学。

@@ -128,6 +128,13 @@ def test_prompt_camera_motion_rule():
     assert "禁止 Static 全片" in p           # 防固定视野
 
 
+def test_prompt_multi_person_extras_rule():
+    """路人泛化多人规范 (2026-08-21 团课/群场景): 多人镜用泛化路人, 全片≤2 镜."""
+    p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
+    assert "路人泛化" in p or "extras in background" in p
+    assert "多人镜 ≤2" in p
+
+
 def test_prompt_contains_style_block():
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
     assert "photorealistic" in p

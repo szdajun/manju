@@ -199,7 +199,7 @@ neg: {neg}
      → 镜6 林夏 dialog 单人(悬念+sign-off)。
    每镜四字段:
    - shot (英文关键帧 prompt, 描述性静态场景), 必须:
-     a) 以景别开头, **优先全身/大半身 (性感健身内容要秀身材, 2026-08-07 用户拍板)**: full body shot / medium full shot / three-quarter body shot 为主, 少用 medium close-up, 尽量不用 close-up (近景看不到身材);
+     a) 以景别开头 (五大景别术语, 2026-08-21 统一): **优先 MS/WS (全身/大半身, 性感健身内容要秀身材, 2026-08-07 用户拍板)**; 少用 MCU, 尽量不用 CU (近景看不到身材)。⚠ 旧词 medium full shot / three-quarter body shot 已废弃, 用标准五大景别词: EWS / WS / MS / MCU / CU;
      a') 景别轮换 (2026-08-21 视觉语言模块): 五大景别 EWS(极远景)/WS(全景)/MS(中景)/
      MCU(近景)/CU(特写)。全片至少覆盖 3 种, 相邻镜尽量不同景别。训练镜优先 MS/WS
      (秀身材+动作), 表情/反应镜用 MCU/CU (情绪), 环境镜用 EWS/WS (氛围)。禁止全片

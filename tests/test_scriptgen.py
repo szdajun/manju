@@ -94,10 +94,10 @@ def test_prompt_dual_few_shot_full_episode():
 
 
 def test_prompt_buffer_shot_rule():
-    """缓冲镜律: 无人纯环境空镜 frame_chars=[] 与反应镜区分."""
+    """缓冲镜律已废除 (2026-08-21 用户拍板): 不再强制无人空镜, 镜3 改训练镜."""
     p = build_prompt("t", "title", 5, STYLES["real"]["style"], STYLES["real"]["neg"])
-    assert "frame_chars 留空数组 []" in p      # 显式无人标注
-    assert "纯场景画面给观众换气" in p          # 呼吸位语义
+    assert "废除强制空镜" in p or "已废除" in p   # 旧缓冲镜律作废
+    assert "训练镜" in p                          # 镜3 替代为有人训练镜
     assert "六镜织体参考模板" in p              # 6 镜模板替换 5 镜版
 
 

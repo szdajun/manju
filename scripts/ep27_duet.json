@@ -28,11 +28,13 @@
       "line_type": "dialog"
     },
     "3": {
-      "shot": "close-up shot of the squat rack barbell with round weight plates in a modern gym interior at evening, dust particles floating in the beam of bright overhead gym lighting, no people in frame, vertical composition, quiet comedic stillness mood",
+      "shot": "medium shot, Linxia in misty-blue sports bra with white arc logo, performing a dumbbell bicep curl near the dumbbell rack, her black high-waist glossy leggings and long legs visible, bright overhead gym lighting, vertical composition, focused training mood, face clearly visible",
       "line": "",
-      "motion": "the barbell sits still on the rack, dust particles drift slowly through the light beam, the light flickers almost imperceptibly once, very subtle ambient motion, quiet still atmosphere, no camera shake",
-      "speaker": "",
-      "frame_chars": [],
+      "motion": "Linxia curls the dumbbell up toward her shoulder, elbow tucked, then slowly lowers it, steady controlled rep, focused expression, the misty-blue sports bra stays misty-blue throughout, the black leggings stay black throughout, the white arc logo stays in the same position on the left chest",
+      "speaker": "LINXIA",
+      "frame_chars": [
+        "LINXIA"
+      ],
       "line_type": "ambient"
     },
     "4": {
@@ -47,7 +49,10 @@
       "line": "腿比你先知道，明天休假的名单没你。",
       "motion": "Licoach points one finger at her legs then gently pats Linxia's shoulder once, subtle pointing and patting motion, warm encouraging expression while speaking, the navy-blue tank top stays navy-blue throughout, the black shorts stay black throughout, the white whistle logo stays in the same position on the chest",
       "speaker": "LICOACH",
-      "frame_chars": ["LINXIA", "LICOACH"],
+      "frame_chars": [
+        "LINXIA",
+        "LICOACH"
+      ],
       "line_type": "dialog"
     },
     "6": {

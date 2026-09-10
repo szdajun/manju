@@ -783,6 +783,10 @@ def _h3_base_nodes(positive, width, height, length, seed, filename_prefix,
     if turbo:
         steps = 8
         model_ref = ["lora", 0]
+    # ⚠ 必须用 UnetLoaderGGUFDynamicVRAM: ① 19.9GB Q8 权重 > 12GB 显存, 靠 aimdo 流式;
+    #   ② 经典 "UnetLoaderGGUF" 名被 ComfyUI-GGUF_KREA-2 fork 抢注 (不认 minimax_h3 架构).
+    #   代价: i2v 要求 ComfyUI 不带 --disable-dynamic-vram 启动 (DynamicVRAM 加载器硬检查);
+    #   而 kf 链 (IPAdapter) 恰恰要求带 → 两模式启动, 见 HANDOFF (2026-09-10).
     nodes = {
         "unet": {"class_type": "UnetLoaderGGUFDynamicVRAM", "inputs": {
             "unet_name": unet_gguf}},

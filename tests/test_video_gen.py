@@ -146,6 +146,7 @@ def test_h3_i2v_workflow_structure():
     assert wf["frame"]["class_type"] == "LoadImage"
     assert wf["sampler"]["inputs"]["latent_image"] == ["cond", 1]
     assert wf["unet"]["inputs"]["unet_name"] == H3_MODELS["fl2va_gguf"]
+    # 经典名被 GGUF_KREA-2 fork 抢注 + 19.9GB 权重需 aimdo 流式 → 必须 DynamicVRAM 变体
     assert wf["unet"]["class_type"] == "UnetLoaderGGUFDynamicVRAM"
     assert wf["save"]["inputs"]["format"] == "mp4"
 

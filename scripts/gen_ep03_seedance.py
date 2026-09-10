@@ -302,7 +302,9 @@ def main():
                         synthesize(line, tmp_voice,
                                    voice=character(script, s)["voice_id"], speed=1.0)
                     _pad_audio_to_duration(tmp_voice, dur)   # 补静音到镜头时长
-                    kw["audio"] = tmp_voice
+                    # AddGuide 硬锚 (2026-09-10 转正): TTS 钉在 frame 0 (keyframe 同机制),
+                    # 声线漂移根治 (互相关 0.235→0.996 近透传). 软 ref (audio=) 退役.
+                    kw["audio_guide"] = tmp_voice
                     # R2V A/B (2026-08-19): identity_ref → refs=[kf,定妆照] 双参考,
                     # prompt 用双参考变体 (P1 构图锚 / P2 身份锚, 脸跟 P2)
                     if ident_ref and os.path.exists(ident_ref):

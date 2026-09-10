@@ -123,8 +123,8 @@ def test_i2v_h3_line_type_routing(tmp_path):
                         "--kf-dir", kf_dir, "--out", out_dir])
 
     assert len(gen_calls) == 3
-    # shot1 dialog: audio + 六段式 + <d>[中文]台词</d> + 无旧中文指令
-    assert gen_calls[0]["kw"].get("audio")
+    # shot1 dialog: audio_guide 硬锚 (2026-09-10 转正) + 六段式 + <d>[中文]台词</d> + 无旧中文指令
+    assert gen_calls[0]["kw"].get("audio_guide")
     p0 = gen_calls[0]["prompt"]
     assert "subject_definitions:" in p0
     assert "<d>[中文]你好,我要说话</d>" in p0      # 台词保留中文
@@ -167,8 +167,8 @@ def test_i2v_h3_line_type_routing_legacy(tmp_path):
                         "--prompt-style", "legacy"])
 
     assert len(gen_calls) == 3
-    # shot1 dialog: 旧中文说话指令 + 台词内嵌 + 服装前置
-    assert gen_calls[0]["kw"].get("audio")
+    # shot1 dialog: 旧中文说话指令 + 台词内嵌 + 服装前置 (音频通路同走 audio_guide 硬锚)
+    assert gen_calls[0]["kw"].get("audio_guide")
     assert "用中文清晰自然地念出台词" in gen_calls[0]["prompt"]
     assert "你好,我要说话" in gen_calls[0]["prompt"]
     assert "misty-blue top" in gen_calls[0]["prompt"]
@@ -257,6 +257,37 @@ def test_i2v_h3_dual_dialog_routing(tmp_path):
     assert "<d>[中文]还不错，继续！</d>" in p1
     refs1 = kw2["ref_images"]
     assert "linxia.png" in refs1[0] and "client_k.png" in refs1[1]
+
+
+def test_i2v_h3_single_dialog_audio_guide_routing(tmp_path):
+    """单人对话镜 (官方): 台词 TTS 走 AddGuide 硬锚 (audio_guide), 软 ref 退役.
+
+    声线漂移根治 (2026-09-10 实验: 互相关 0.235→0.996 近透传).
+    """
+    from scripts import gen_ep03_seedance as i2v
+    chars = {"LINXIA": {"fingerprint": "1girl, solo, Linxia, misty-blue top",
+                        "voice_id": "female-shaonv"}}
+    shots = {"1": {"shot": "ms", "line": "今天开始，我要做一个真正自律的人",
+                   "motion": "wave", "speaker": "LINXIA",
+                   "frame_chars": ["LINXIA"]}}
+    script = _dual_script(tmp_path, chars, shots)
+    kf_dir = os.path.join(str(tmp_path), "kf"); os.makedirs(kf_dir, exist_ok=True)
+    out_dir = os.path.join(str(tmp_path), "out"); os.makedirs(out_dir, exist_ok=True)
+    open(os.path.join(kf_dir, "ep05_shot01_1.png"), "w").close()
+    gen_calls = []
+    with patch("scripts.gen_ep03_seedance.load_script", return_value=script), \
+         patch("scripts.gen_ep03_seedance.generate",
+               side_effect=lambda src, prompt, out, **kw: gen_calls.append(
+                   {"kw": kw, "prompt": prompt})), \
+         patch("scripts.gen_ep03_seedance.synthesize",
+               side_effect=lambda text, out, **kw: open(out, "w").write("x")), \
+         patch("scripts.gen_ep03_seedance._pad_audio_to_duration"), \
+         patch("lib.video_gen.PROVIDER", "h3_local"):
+        _run_main(i2v, ["--ep", "05", "--shots", "1", "--kf-dir", kf_dir,
+                        "--out", out_dir])
+    assert len(gen_calls) == 1
+    kw = gen_calls[0]["kw"]
+    assert "audio" not in kw and kw.get("audio_guide")
 
 
 def test_i2v_h3_dual_dialog_routing_legacy(tmp_path):

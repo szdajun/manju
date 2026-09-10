@@ -276,7 +276,8 @@ def h3_local_i2v(image, prompt, out, duration=5, width=768, height=1344,
                  mode="single", ref_images=None, seed=None,
                  server="http://127.0.0.1:8188", filename_prefix=None,
                  unet_gguf=None, ref_image_size="match", turbo=False,
-                 audio=None, audio_slot="ref_audios", identity_ref=None):
+                 audio=None, audio_slot="ref_audios", identity_ref=None,
+                 audio_guide=None):
     """H3 本地 i2v (免费, 2026-08-06). 单人 ImageToVideo 或双人 Ref2VA.
 
     Args:
@@ -315,20 +316,23 @@ def h3_local_i2v(image, prompt, out, duration=5, width=768, height=1344,
         uploaded = [client.upload_image(r) for r in ref_images]
         # 台词音频 (对话镜) → 复制到 ComfyUI input (LoadAudio 读相对路径)
         audio_name = _copy_audio_to_comfy_input(audio) if audio else None
+        guide_name = _copy_audio_to_comfy_input(audio_guide) if audio_guide else None
         wf = build_h3_ref2va_workflow(
             uploaded, prompt, width=width, height=height, length=length,
             seed=base, filename_prefix=filename_prefix or "manju_h3_dual",
             unet_gguf=unet_gguf, ref_image_size=ref_image_size, turbo=turbo,
-            audio=audio_name, audio_slot=audio_slot,
+            audio=audio_name, audio_slot=audio_slot, audio_guide=guide_name,
         )
     else:
         # 单人: 上传首帧关键帧
         frame_name = client.upload_image(image)
-        if audio:
+        if audio or audio_guide:
             # 对话镜: Ref2VA 单参考图 + 音频驱动口型 (已验证 _h3_single_talk.json 路径;
             # H3 音视频联合生成, 唇型由音频音素驱动). 首帧关键帧作身份参考.
             # identity_ref (R2V A/B): 双参考 [kf, 定妆照], P1 构图 P2 身份.
-            audio_name = _copy_audio_to_comfy_input(audio)
+            # audio_guide (v0.35 实验): AddGuide 硬锚定 TTS 于 frame 0, 可单独用 (guide-only).
+            audio_name = _copy_audio_to_comfy_input(audio) if audio else None
+            guide_name = _copy_audio_to_comfy_input(audio_guide) if audio_guide else None
             if identity_ref:
                 ident_name = client.upload_image(identity_ref)
                 refs = [frame_name, ident_name]
@@ -339,6 +343,7 @@ def h3_local_i2v(image, prompt, out, duration=5, width=768, height=1344,
                 seed=base, filename_prefix=filename_prefix or "manju_h3",
                 unet_gguf=unet_gguf, ref_image_size=ref_image_size,
                 turbo=turbo, audio=audio_name, audio_slot=audio_slot,
+                audio_guide=guide_name,
             )
         else:
             wf = build_h3_i2v_workflow(

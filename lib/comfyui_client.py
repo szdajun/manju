@@ -855,6 +855,7 @@ def build_h3_ref2va_workflow(
     ref_images, positive, width=768, height=1344, length=124,
     seed=None, filename_prefix="manju_h3_dual", unet_gguf=None, models=None,
     ref_image_size="match", turbo=False, audio=None, audio_slot="ref_audios",
+    audio_guide=None,
 ):
     """H3 双人 Ref2VA (多参考图). 基于已验证的 h3_ref2va_local_gguf_fix.json.
 
@@ -864,6 +865,9 @@ def build_h3_ref2va_workflow(
     audio: 台词音频文件 (ComfyUI input 名) → LoadAudio → ref_audios.ref_audio_0.
         H3 用音频音素驱动角色口型 (对话镜). 默认 None (无音频, 环境音).
     audio_slot: "ref_audios" (角色台词驱动口型) | "ref_video_audios" (参考视频音频).
+    audio_guide: 台词音频文件 (ComfyUI input 名) → AddGuide 硬锚定于 frame 0
+        (ComfyUI v0.34 keyframes 通路, cond_audio 段钉在目标时间线上, 比软 ref 强).
+        与 audio 可并存 (软 ref + 硬锚). 声线漂移实验 (2026-09-10).
     """
     if seed is None:
         seed = int.from_bytes(os.urandom(4), "big") % (2**32)
@@ -886,4 +890,11 @@ def build_h3_ref2va_workflow(
         cond_inputs[f"{audio_slot}.ref_audio_0"] = ["audio_line", 0]
     wf["cond"] = {"class_type": "MiniMaxH3ReferenceToVideo", "inputs": cond_inputs}
     wf["sampler"]["inputs"]["latent_image"] = ["cond", 1]
+    # 音频硬锚定: AddGuide 接管 guider conditioning (keyframes = 模型训练过的首帧机制)
+    if audio_guide:
+        wf["guide_audio"] = {"class_type": "LoadAudio", "inputs": {"audio": audio_guide}}
+        wf["guide"] = {"class_type": "MiniMaxH3AddGuide", "inputs": {
+            "positive": ["cond", 0], "latent": ["cond", 1],
+            "audio_vae": ["vae_a", 0], "audio": ["guide_audio", 0], "frame_idx": 0}}
+        wf["guider"]["inputs"]["conditioning"] = ["guide", 0]
     return wf

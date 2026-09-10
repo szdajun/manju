@@ -239,6 +239,67 @@ def test_h3_local_i2v_single_dialog_identity_ref(tmp_path):
     assert os.path.exists(out)
 
 
+def test_h3_ref2va_workflow_audio_guide():
+    """AddGuide 音频硬锚定 (ComfyUI v0.34): TTS 锚在 frame 0 走 keyframes 硬条件通路."""
+    wf = build_h3_ref2va_workflow(["a.png"], "pos", length=124, seed=42,
+                                  audio_guide="voice_01.mp3")
+    assert wf["guide"]["class_type"] == "MiniMaxH3AddGuide"
+    assert wf["guide"]["inputs"]["positive"] == ["cond", 0]
+    assert wf["guide"]["inputs"]["latent"] == ["cond", 1]
+    assert wf["guide"]["inputs"]["audio_vae"] == ["vae_a", 0]
+    assert wf["guide"]["inputs"]["audio"] == ["guide_audio", 0]
+    assert wf["guide"]["inputs"]["frame_idx"] == 0
+    assert wf["guide_audio"]["class_type"] == "LoadAudio"
+    assert wf["guide_audio"]["inputs"]["audio"] == "voice_01.mp3"
+    # guider conditioning 接到 guide 输出 (不再直连 cond)
+    assert wf["guider"]["inputs"]["conditioning"] == ["guide", 0]
+
+
+def test_h3_ref2va_workflow_audio_guide_ref_coexist():
+    """audio (软ref) 与 audio_guide (硬锚) 并存 (B3 变体): 两通路各自接线."""
+    wf = build_h3_ref2va_workflow(["a.png"], "pos", length=124, seed=42,
+                                  audio="voice_01.mp3", audio_guide="voice_01.mp3")
+    assert wf["cond"]["inputs"]["ref_audios.ref_audio_0"] == ["audio_line", 0]
+    assert wf["guide"]["inputs"]["audio"] == ["guide_audio", 0]
+    assert wf["guider"]["inputs"]["conditioning"] == ["guide", 0]
+
+
+def test_h3_ref2va_workflow_no_guide_by_default():
+    """回归: 不传 audio_guide 无 guide 节点, guider 直连 cond (原行为不变)."""
+    wf = build_h3_ref2va_workflow(["a.png"], "pos", length=124, seed=42,
+                                  audio="voice_01.mp3")
+    assert "guide" not in wf
+    assert "guide_audio" not in wf
+    assert wf["guider"]["inputs"]["conditioning"] == ["pos", 0]
+
+
+def test_h3_local_i2v_single_dialog_audio_guide(tmp_path):
+    """单人对话镜 audio_guide (无软ref): 走 Ref2VA + AddGuide 硬锚定."""
+    image = tmp_path / "kf.png"; image.write_bytes(b"PNG")
+    out = tmp_path / "out.mp4"
+    fake = _FakeClient()
+
+    def _fake_finalize(src, dst):
+        with open(dst, "wb") as f:
+            f.write(b"FAKE")
+
+    with patch("lib.comfyui_client.ComfyUIClient", return_value=fake), \
+         patch("lib.video_gen._finalize_h3_output", side_effect=_fake_finalize), \
+         patch("lib.video_gen._copy_audio_to_comfy_input",
+               return_value="voice_shot01.mp3") as copy_aud:
+        h3_local_i2v(str(image), "说话 prompt", str(out), duration=5,
+                     mode="single", audio_guide="F:/voices/voice_shot01.mp3")
+    assert len(fake.gen_calls) == 1
+    wf = fake.gen_calls[0]
+    assert wf["cond"]["class_type"] == "MiniMaxH3ReferenceToVideo"
+    # guide only: 无软 ref 音频
+    assert "ref_audios.ref_audio_0" not in wf["cond"]["inputs"]
+    assert wf["guide"]["class_type"] == "MiniMaxH3AddGuide"
+    assert wf["guider"]["inputs"]["conditioning"] == ["guide", 0]
+    copy_aud.assert_called_once_with("F:/voices/voice_shot01.mp3")
+    assert os.path.exists(out)
+
+
 def test_h3_local_i2v_single_noaudio_image_to_video(tmp_path):
     """单人无 audio (旁白/环境音镜): 仍走 ImageToVideo (不误入 ref2va)."""
     image = tmp_path / "kf.png"; image.write_bytes(b"PNG")

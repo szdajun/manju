@@ -273,7 +273,9 @@ def main():
                             synthesize(line, tmp_voice,
                                        voice=character(script, s)["voice_id"], speed=1.0)
                         _pad_audio_to_duration(tmp_voice, dur)   # 补静音到镜头时长
-                        kw["audio"] = tmp_voice
+                        # AddGuide 硬锚 (2026-09-10 双人 A/B 通过): 互相关 0.364→0.997,
+                        # 说话人口型/声线钉死, 倾听者不受染. 与单人对话镜同机制.
+                        kw["audio_guide"] = tmp_voice
                         # 官方六段式 (默认) / legacy 旧中文指令 (回退)
                         prompt = (_build_dual_dialog_prompt(script, s)
                                   if args.prompt_style == "legacy"

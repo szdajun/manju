@@ -227,17 +227,18 @@ def _run_dual(i2v, script, root, extra_argv):
 
 
 def test_i2v_h3_dual_dialog_routing(tmp_path):
-    """官方六段式 (默认): dual 双角色 ref + 说话人音频 + 六段式 subject definitions."""
+    """官方六段式 (默认): dual 双角色 ref + 说话人音频硬锚 + 六段式 subject definitions."""
     from scripts import gen_ep03_seedance as i2v
     script = _dual_script_fixture(tmp_path)
     gen_calls = _run_dual(i2v, script, str(tmp_path), [])
 
     assert len(gen_calls) == 2
-    # shot1: LINXIA 说话 → dual, 两 ref, audio; 六段式 Subject 1=倾听者 client_k, Subject 2=说话者 LINXIA
+    # shot1: LINXIA 说话 → dual, 两 ref, audio_guide 硬锚 (2026-09-10 双人 A/B 通过:
+    # 互相关 0.364→0.997); 六段式 Subject 1=倾听者 client_k, Subject 2=说话者 LINXIA
     kw1 = gen_calls[0]["kw"]
     assert kw1.get("mode") == "dual"
     assert len(kw1.get("ref_images", [])) == 2
-    assert kw1.get("audio")
+    assert "audio" not in kw1 and kw1.get("audio_guide")
     p0 = gen_calls[0]["prompt"]
     assert "subject_definitions:" in p0
     assert "<Subject 1> is the person in <Picture 1>, red dress." in p0          # 倾听者 client_k
@@ -300,7 +301,7 @@ def test_i2v_h3_dual_dialog_routing_legacy(tmp_path):
     kw1 = gen_calls[0]["kw"]
     assert kw1.get("mode") == "dual"
     assert len(kw1.get("ref_images", [])) == 2
-    assert kw1.get("audio")
+    assert kw1.get("audio_guide")   # legacy prompt 不影响音频通路 (同为硬锚)
     p0 = gen_calls[0]["prompt"]
     assert "对应【倾听者：client_k" in p0    # Picture 1 = 倾听者 (ref0)
     assert "对应【说话人：LINXIA" in p0

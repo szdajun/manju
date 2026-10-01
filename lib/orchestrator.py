@@ -26,7 +26,7 @@ SCRIPTS = os.path.join(MANJU, "scripts")
 # 阶段顺序 (固定, 不可调换)
 # 2026-08-15 P0: verify = 质量门 (i2v 后跑 check_i2v_face 跨镜人脸一致性, fitness venv)
 STAGES = ("kf", "i2v", "verify", "voice", "assemble")
-FIT_PY = "../fitness-video-pipeline/.venv/Scripts/python.exe"  # insightface 在 fitness venv
+FIT_PY = os.environ.get("FIT_PY", "../fitness-video-pipeline/.venv/Scripts/python.exe")  # insightface 在 fitness venv
 STAGE_ALIASES = {
     "kf": "kf", "keyframes": "kf",
     "i2v": "i2v", "video": "i2v",

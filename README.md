@@ -64,5 +64,10 @@ $PY scripts/build_wan_animate_demo.py \
 策略:MVP 先手动验证(零成本),过了再上 API 量产。
 
 ## 当前进度
-- ep01《一个举过铁的牛马》:剧本 + 即梦提示词就绪
-- 下一步:即梦手动生主角立绘,验证角色一致性
+- ep01–ep33 已注册进 `EP_SCRIPTS` (`lib/orchestrator.py`), `scripts/run_series.py` 批量调度; ep02/ep20/ep26/ep27/ep30/ep33 等已出片验证
+- 全链路: 剧本 (LLM) → 定妆/关键帧 (SDXL/ComfyUI) → i2v (H3/LTX/Wan2.2) → 配音 (MiniMax) → 后期 (字幕/转场/BGM/封面, `lib/post_styles.py`)
+- 多集批量: `scripts/run_series.py` 范围解析 / 失败隔离 / 状态落盘 / retry- 验收工具: `scripts/pitch_check.py` 基频 + `scripts/f0_check.py` 帧基中位声线判定
+- 当前主线: Wan-Animate 动作克隆 1536×2304 交付; i2v 对话镜 AddGuide 音频硬锚转正 (ep33 首个全集)
+
+## License
+Apache 2.0 — 见 [LICENSE](LICENSE)。
